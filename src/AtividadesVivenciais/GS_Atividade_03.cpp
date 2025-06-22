@@ -546,6 +546,8 @@ void desenharMapa(GLuint shaderID)
     float x0 = 400;
     float y0 = 100;
 
+    // --- STAGGERED ISOMETRIC ---
+    // Tiles pares (i % 2 == 0) começam em x0, ímpares deslocados em x0 + tileWidth/2
     for(int i=0; i<TILEMAP_HEIGHT; i++)
     {
         for (int j=0; j < TILEMAP_WIDTH; j++)
@@ -553,17 +555,22 @@ void desenharMapa(GLuint shaderID)
             mat4 model = mat4(1);
             Tile curr_tile = tileset[map[i][j]];
 
-            float x = x0 + (j-i) * curr_tile.dimensions.x/2.0;
-            float y = y0 + (j+i) * curr_tile.dimensions.y/2.0;
+            float tileW = curr_tile.dimensions.x;
+            float tileH = curr_tile.dimensions.y;
 
-            model = translate(model, vec3(x,y,0.0));
-            model = scale(model,curr_tile.dimensions);
+            float x = x0 + j * tileW;
+            if (i % 2 == 1) x += tileW / 2.0f;
+
+            float y = y0 + i * (tileH / 2.0f);
+
+            model = translate(model, vec3(x, y, 0.0));
+            model = scale(model, curr_tile.dimensions);
             glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
 
             vec2 offsetTex;
             offsetTex.s = curr_tile.iTile * curr_tile.ds;
             offsetTex.t = 0.0;
-            glUniform2f(glGetUniformLocation(shaderID, "offsetTex"),offsetTex.s, offsetTex.t);
+            glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
 
             glBindVertexArray(curr_tile.VAO);
             glBindTexture(GL_TEXTURE_2D, curr_tile.texID);
@@ -571,21 +578,24 @@ void desenharMapa(GLuint shaderID)
         }
     }
 
-    //desenhando o marcador da posição do jogador
+    // --- marcador da posição do jogador (staggered) ---
     Tile marker = tileset[6];
+    float tileW = marker.dimensions.x;
+    float tileH = marker.dimensions.y;
 
-    float px = x0 + (player_j - player_i) * marker.dimensions.x/2.0;
-    float py = y0 + (player_j + player_i) * marker.dimensions.y/2.0;
+    float px = x0 + player_j * tileW;
+    if (player_i % 2 == 1) px += tileW / 2.0f;
+    float py = y0 + player_i * (tileH / 2.0f);
 
     mat4 model = mat4(1);
-    model = translate(model, vec3(px,py,0.1f));
+    model = translate(model, vec3(px, py, 0.1f));
     model = scale(model, marker.dimensions);
     glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
 
     vec2 offsetTex;
     offsetTex.s = marker.iTile * marker.ds;
     offsetTex.t = 0.0;
-    glUniform2f(glGetUniformLocation(shaderID, "offsetTex"),offsetTex.s, offsetTex.t);
+    glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
 
     glBindVertexArray(marker.VAO);
     glBindTexture(GL_TEXTURE_2D, marker.texID);
