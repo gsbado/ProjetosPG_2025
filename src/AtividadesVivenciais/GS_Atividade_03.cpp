@@ -49,29 +49,29 @@ struct Sprite
 struct Tile
 {
 	GLuint VAO;
-	GLuint texID; // de qual tileset
+	GLuint texID; //de qual tileset
 	int iTile; //indice dele no tileset
 	vec3 position;
 	vec3 dimensions; //tamanho do losango 2:1
 	float ds, dt;
 	//int iAnimation, iFrame;
 	//int nAnimations, nFrames;
-};	
+};
 
-// Protótipo da função de callback de teclado
+//posições iniciais do sprite no mapa
+int player_i = 0;
+int player_j = 0;
+
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 
-// Protótipos das funções
 int setupShader();
 int setupSprite(int nAnimations, int nFrames, float &ds, float &dt);
 int setupTile(int nTiles, float &ds, float &dt);
 int loadTexture(string filePath, int &width, int &height);
 void desenharMapa(GLuint shaderID);
 
-// Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 800, HEIGHT = 600;
 
-// Código fonte do Vertex Shader (em GLSL): ainda hardcoded
 const GLchar *vertexShaderSource = R"(
  #version 400
  layout (location = 0) in vec3 position;
@@ -86,7 +86,6 @@ const GLchar *vertexShaderSource = R"(
  }
  )";
 
-// Código fonte do Fragment Shader (em GLSL): ainda hardcoded
 const GLchar *fragmentShaderSource = R"(
  #version 400
  in vec2 tex_coord;
@@ -111,10 +110,8 @@ int map[3][3] = {
 
 vector <Tile> tileset;
 
-// Função MAIN
 int main()
 {
-	// Inicialização da GLFW
 	glfwInit();
 
 	// Muita atenção aqui: alguns ambientes não aceitam essas configurações
@@ -126,7 +123,6 @@ int main()
 	// glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	// glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	// Ativa a suavização de serrilhado (MSAA) com 8 amostras por pixel
 	glfwWindowHint(GLFW_SAMPLES, 8);
 
 	// Essencial para computadores da Apple
@@ -134,7 +130,6 @@ int main()
 	//	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	// #endif
 
-	// Criação da janela GLFW
 	GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Triangulo! -- Rossana", nullptr, nullptr);
 	if (!window)
 	{
@@ -144,31 +139,25 @@ int main()
 	}
 	glfwMakeContextCurrent(window);
 
-	// Fazendo o registro da função de callback para a janela GLFW
 	glfwSetKeyCallback(window, key_callback);
 
-	// GLAD: carrega todos os ponteiros d funções da OpenGL
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
 		std::cerr << "Falha ao inicializar GLAD" << std::endl;
 		return -1;
 	}
 
-	// Obtendo as informações de versão
 	const GLubyte *renderer = glGetString(GL_RENDERER); /* get renderer string */
 	const GLubyte *version = glGetString(GL_VERSION);	/* version as a string */
 	cout << "Renderer: " << renderer << endl;
 	cout << "OpenGL version supported " << version << endl;
 
-	// Definindo as dimensões da viewport com as mesmas dimensões da janela da aplicação
 	int width, height;
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 
-	// Compilando e buildando o programa de shader
 	GLuint shaderID = setupShader();
 
-	//Carregando uma textura 
 	int imgWidth, imgHeight;
 	//GLuint texID = loadTexture("../assets/sprites/Vampires1_Walk_full.png",imgWidth,imgHeight);
 	GLuint texID = loadTexture("../assets/tilesets/tilesetIso.png",imgWidth,imgHeight);
@@ -183,7 +172,6 @@ int main()
 	vampirao.iAnimation = 1;
 	vampirao.iFrame = 0; */
 
-	// Configura o tileset - conjunto de tiles do mapa
 	for (int i=0; i < 7; i++)
 	{
 		Tile tile;
@@ -242,7 +230,7 @@ int main()
 
 				// Cria uma string e define o FPS como título da janela.
 				char tmp[256];
-				sprintf(tmp, "Ola Triangulo! -- Rossana\tFPS %.2lf", fps);
+				sprintf(tmp, "Tilemap Isométrico -- Gabriela e Sadi\tFPS %.2lf", fps);
 				glfwSetWindowTitle(window, tmp);
 
 				title_countdown_s = 0.1; // Reinicia o temporizador para atualizar o título periodicamente.
@@ -300,20 +288,53 @@ int main()
 	return 0;
 }
 
-// Função de callback de teclado - só pode ter uma instância (deve ser estática se
-// estiver dentro de uma classe) - É chamada sempre que uma tecla for pressionada
-// ou solta via GLFW
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
+    float moveSpeed = 1.0f;
+
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GL_TRUE);
+
+    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+        int new_i = player_i;
+        int new_j = player_j;
+
+        if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D)
+            new_j++;
+
+        if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A)
+            new_j--;
+
+        if (key == GLFW_KEY_UP || key == GLFW_KEY_W)
+            new_i--;
+
+        if (key == GLFW_KEY_DOWN || key == GLFW_KEY_S)
+            new_i++;
+
+        if (key == GLFW_KEY_Q)
+        {
+            new_i--; new_j--;
+        }
+        if (key == GLFW_KEY_E)
+        {
+            new_i--; new_j++;
+        }
+        if (key == GLFW_KEY_Z)
+        {
+            new_i++; new_j--;
+        }
+        if (key == GLFW_KEY_C)
+        {
+            new_i++; new_j++;
+        }
+
+        if (new_i >= 0 && new_i < TILEMAP_HEIGHT && new_j >= 0 && new_j < TILEMAP_WIDTH) {
+			player_i = new_i;
+			player_j = new_j;
+		}
+    }
 }
 
-// Esta função está bastante hardcoded - objetivo é compilar e "buildar" um programa de
-//  shader simples e único neste exemplo de código
-//  O código fonte do vertex e fragment shader está nos arrays vertexShaderSource e
-//  fragmentShader source no iniçio deste arquivo
-//  A função retorna o identificador do programa de shader
 int setupShader()
 {
 	// Vertex shader
