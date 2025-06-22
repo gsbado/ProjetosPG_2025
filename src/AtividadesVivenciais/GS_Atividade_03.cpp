@@ -40,7 +40,7 @@ struct Sprite
 	GLuint VAO;
 	GLuint texID;
 	vec3 position;
-	vec3 dimensions; //tamanho do frame
+	vec3 dimensions;
 	float ds, dt;
 	int iAnimation, iFrame;
 	int nAnimations, nFrames;
@@ -184,28 +184,25 @@ int main()
 
 
 
-	glUseProgram(shaderID); // Reseta o estado do shader para evitar problemas futuros
+	glUseProgram(shaderID);
 
-	double prev_s = glfwGetTime();	// Define o "tempo anterior" inicial.
-	double title_countdown_s = 0.1; // Intervalo para atualizar o título da janela com o FPS.
+	double prev_s = glfwGetTime();
+	double title_countdown_s = 0.1;
 
 	float colorValue = 0.0;
 
-	// Ativando o primeiro buffer de textura do OpenGL
 	glActiveTexture(GL_TEXTURE0);
 
-	// Criando a variável uniform pra mandar a textura pro shader
 	glUniform1i(glGetUniformLocation(shaderID, "tex_buff"), 0);
 
-	// Matriz de projeção paralela ortográfica
 	mat4 projection = ortho(0.0, 800.0, 600.0, 0.0, -1.0, 1.0);
 	glUniformMatrix4fv(glGetUniformLocation(shaderID, "projection"), 1, GL_FALSE, value_ptr(projection));
 
-	glEnable(GL_DEPTH_TEST); // Habilita o teste de profundidade
-	glDepthFunc(GL_ALWAYS); // Testa a cada ciclo
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_ALWAYS);
 
-	glEnable(GL_BLEND); //Habilita a transparência -- canal alpha
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Seta função de transparência
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
 	double lastTime = 0.0;
@@ -213,44 +210,36 @@ int main()
 	double currTime = glfwGetTime();
 	double FPS = 12.0;
 
-	// Loop da aplicação - "game loop"
 	while (!glfwWindowShouldClose(window))
 	{
-		// Este trecho de código é totalmente opcional: calcula e mostra a contagem do FPS na barra de título
 		{
-			double curr_s = glfwGetTime();		// Obtém o tempo atual.
-			double elapsed_s = curr_s - prev_s; // Calcula o tempo decorrido desde o último frame.
-			prev_s = curr_s;					// Atualiza o "tempo anterior" para o próximo frame.
+			double curr_s = glfwGetTime();
+			double elapsed_s = curr_s - prev_s;
+			prev_s = curr_s;
 
-			// Exibe o FPS, mas não a cada frame, para evitar oscilações excessivas.
 			title_countdown_s -= elapsed_s;
 			if (title_countdown_s <= 0.0 && elapsed_s > 0.0)
 			{
-				double fps = 1.0 / elapsed_s; // Calcula o FPS com base no tempo decorrido.
+				double fps = 1.0 / elapsed_s;
 
-				// Cria uma string e define o FPS como título da janela.
 				char tmp[256];
 				sprintf(tmp, "Tilemap Isométrico -- Gabriela e Sadi\tFPS %.2lf", fps);
 				glfwSetWindowTitle(window, tmp);
 
-				title_countdown_s = 0.1; // Reinicia o temporizador para atualizar o título periodicamente.
+				title_countdown_s = 0.1;
 			}
 		}
 
-		// Checa se houveram eventos de input (key pressed, mouse moved etc.) e chama as funções de callback correspondentes
 		glfwPollEvents();
 
-		// Limpa o buffer de cor
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // cor de fundo
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glLineWidth(10);
 		glPointSize(20);
 
-		// Desenhar o mapa
 		desenharMapa(shaderID);
 
-		//---------------------------------------------------------------------
 		// Desenho do vampirao
 		// Matriz de transformaçao do objeto - Matriz de modelo
 		/* model = mat4(1); //matriz identidade
@@ -279,11 +268,9 @@ int main()
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); */
 		//---------------------------------------------------------------------------
 
-		// Troca os buffers da tela
 		glfwSwapBuffers(window);
 	}
 		
-	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
 	glfwTerminate();
 	return 0;
 }
@@ -337,11 +324,10 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
 int setupShader()
 {
-	// Vertex shader
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
 	glCompileShader(vertexShader);
-	// Checando erros de compilação (exibição via log no terminal)
+
 	GLint success;
 	GLchar infoLog[512];
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
@@ -351,11 +337,11 @@ int setupShader()
 		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
 				  << infoLog << std::endl;
 	}
-	// Fragment shader
+
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
 	glCompileShader(fragmentShader);
-	// Checando erros de compilação (exibição via log no terminal)
+
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
 	if (!success)
 	{
@@ -363,12 +349,12 @@ int setupShader()
 		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
 				  << infoLog << std::endl;
 	}
-	// Linkando os shaders e criando o identificador do programa de shader
+
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
 	glLinkProgram(shaderProgram);
-	// Checando por erros de linkagem
+
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
 	if (!success)
 	{
@@ -382,11 +368,6 @@ int setupShader()
 	return shaderProgram;
 }
 
-// Esta função está bastante harcoded - objetivo é criar os buffers que armazenam a
-// geometria de um triângulo
-// Apenas atributo coordenada nos vértices
-// 1 VBO com as coordenadas, VAO com apenas 1 ponteiro para atributo
-// A função retorna o identificador do VAO
 int setupSprite(int nAnimations, int nFrames, float &ds, float &dt)
 {
 
@@ -405,39 +386,21 @@ int setupSprite(int nAnimations, int nFrames, float &ds, float &dt)
 		};
 
 	GLuint VBO, VAO;
-	// Geração do identificador do VBO
 	glGenBuffers(1, &VBO);
-	// Faz a conexão (vincula) do buffer como um buffer de array
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	// Envia os dados do array de floats para o buffer da OpenGl
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	// Geração do identificador do VAO (Vertex Array Object)
 	glGenVertexArrays(1, &VAO);
-	// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
-	// e os ponteiros para os atributos
 	glBindVertexArray(VAO);
-	// Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando:
-	//  Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
-	//  Numero de valores que o atributo tem (por ex, 3 coordenadas xyz)
-	//  Tipo do dado
-	//  Se está normalizado (entre zero e um)
-	//  Tamanho em bytes
-	//  Deslocamento a partir do byte zero
 
-	// Ponteiro pro atributo 0 - Posição - coordenadas x, y, z
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid *)0);
 	glEnableVertexAttribArray(0);
 
-	// Ponteiro pro atributo 1 - Coordenada de textura s, t
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid *)(3 * sizeof(GLfloat)));
 	glEnableVertexAttribArray(1);
 
-	// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice
-	// atualmente vinculado - para que depois possamos desvincular com segurança
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
 	glBindVertexArray(0);
 
 	return VAO;
@@ -449,7 +412,6 @@ int setupTile(int nTiles, float &ds, float &dt)
 	ds = 1.0 / (float) nTiles;
 	dt = 1.0;
 	
-	// Como eu prefiro escalar depois, th e tw serão 1.0
 	float th = 1.0, tw = 1.0;
 
 	GLfloat vertices[] = {
@@ -461,39 +423,25 @@ int setupTile(int nTiles, float &ds, float &dt)
 		};
 
 	GLuint VBO, VAO;
-	// Geração do identificador do VBO
+
 	glGenBuffers(1, &VBO);
-	// Faz a conexão (vincula) do buffer como um buffer de array
+
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	// Envia os dados do array de floats para o buffer da OpenGl
+
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	// Geração do identificador do VAO (Vertex Array Object)
 	glGenVertexArrays(1, &VAO);
-	// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
-	// e os ponteiros para os atributos
-	glBindVertexArray(VAO);
-	// Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando:
-	//  Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
-	//  Numero de valores que o atributo tem (por ex, 3 coordenadas xyz)
-	//  Tipo do dado
-	//  Se está normalizado (entre zero e um)
-	//  Tamanho em bytes
-	//  Deslocamento a partir do byte zero
 
-	// Ponteiro pro atributo 0 - Posição - coordenadas x, y, z
+	glBindVertexArray(VAO);
+
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid *)0);
 	glEnableVertexAttribArray(0);
 
-	// Ponteiro pro atributo 1 - Coordenada de textura s, t
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid *)(3 * sizeof(GLfloat)));
 	glEnableVertexAttribArray(1);
 
-	// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice
-	// atualmente vinculado - para que depois possamos desvincular com segurança
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
 	glBindVertexArray(0);
 
 	return VAO;
@@ -503,7 +451,6 @@ int loadTexture(string filePath, int &width, int &height)
 {
 	GLuint texID;
 
-	// Gera o identificador da textura na memória
 	glGenTextures(1, &texID);
 	glBindTexture(GL_TEXTURE_2D, texID);
 
@@ -519,11 +466,11 @@ int loadTexture(string filePath, int &width, int &height)
 
 	if (data)
 	{
-		if (nrChannels == 3) // jpg, bmp
+		if (nrChannels == 3)
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 		}
-		else // png
+		else
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		}
@@ -546,8 +493,6 @@ void desenharMapa(GLuint shaderID)
     float x0 = 400;
     float y0 = 100;
 
-    // --- STAGGERED ISOMETRIC ---
-    // Tiles pares (i % 2 == 0) começam em x0, ímpares deslocados em x0 + tileWidth/2
     for(int i=0; i<TILEMAP_HEIGHT; i++)
     {
         for (int j=0; j < TILEMAP_WIDTH; j++)
@@ -578,7 +523,7 @@ void desenharMapa(GLuint shaderID)
         }
     }
 
-    // --- marcador da posição do jogador (staggered) ---
+    //marcando posição do jogador
     Tile marker = tileset[6];
     float tileW = marker.dimensions.x;
     float tileH = marker.dimensions.y;
