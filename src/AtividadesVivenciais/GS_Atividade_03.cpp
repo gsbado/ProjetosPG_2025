@@ -543,38 +543,51 @@ int loadTexture(string filePath, int &width, int &height)
 
 void desenharMapa(GLuint shaderID)
 {
-	//dá pra fazer um cálculo usando tilemap_width e tilemap_height
-	float x0 = 400;
-	float y0 = 100;
+    float x0 = 400;
+    float y0 = 100;
 
-	for(int i=0; i<TILEMAP_HEIGHT; i++)
-	{
-		for (int j=0; j < TILEMAP_WIDTH; j++)
-		{
-			// Matriz de transformaçao do objeto - Matriz de modelo
-			mat4 model = mat4(1); //matriz identidade
-			
-			Tile curr_tile = tileset[map[i][j]];
+    for(int i=0; i<TILEMAP_HEIGHT; i++)
+    {
+        for (int j=0; j < TILEMAP_WIDTH; j++)
+        {
+            mat4 model = mat4(1);
+            Tile curr_tile = tileset[map[i][j]];
 
-			float x = x0 + (j-i) * curr_tile.dimensions.x/2.0;
-			float y = y0 + (j+i) * curr_tile.dimensions.y/2.0;
+            float x = x0 + (j-i) * curr_tile.dimensions.x/2.0;
+            float y = y0 + (j+i) * curr_tile.dimensions.y/2.0;
 
-			model = translate(model, vec3(x,y,0.0));
-			model = scale(model,curr_tile.dimensions);
-			glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+            model = translate(model, vec3(x,y,0.0));
+            model = scale(model,curr_tile.dimensions);
+            glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
 
-		vec2 offsetTex;
+            vec2 offsetTex;
+            offsetTex.s = curr_tile.iTile * curr_tile.ds;
+            offsetTex.t = 0.0;
+            glUniform2f(glGetUniformLocation(shaderID, "offsetTex"),offsetTex.s, offsetTex.t);
 
-		offsetTex.s = curr_tile.iTile * curr_tile.ds;
-		offsetTex.t = 0.0;
-		glUniform2f(glGetUniformLocation(shaderID, "offsetTex"),offsetTex.s, offsetTex.t);
+            glBindVertexArray(curr_tile.VAO);
+            glBindTexture(GL_TEXTURE_2D, curr_tile.texID);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        }
+    }
 
-		glBindVertexArray(curr_tile.VAO); // Conectando ao buffer de geometria
-		glBindTexture(GL_TEXTURE_2D, curr_tile.texID); // Conectando ao buffer de textura
+    //desenhando o marcador da posição do jogador
+    Tile marker = tileset[6];
 
-		// Chamada de desenho - drawcall
-		// Poligono Preenchido - GL_TRIANGLES
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); 
-		}
-	}
+    float px = x0 + (player_j - player_i) * marker.dimensions.x/2.0;
+    float py = y0 + (player_j + player_i) * marker.dimensions.y/2.0;
+
+    mat4 model = mat4(1);
+    model = translate(model, vec3(px,py,0.1f));
+    model = scale(model, marker.dimensions);
+    glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+
+    vec2 offsetTex;
+    offsetTex.s = marker.iTile * marker.ds;
+    offsetTex.t = 0.0;
+    glUniform2f(glGetUniformLocation(shaderID, "offsetTex"),offsetTex.s, offsetTex.t);
+
+    glBindVertexArray(marker.VAO);
+    glBindTexture(GL_TEXTURE_2D, marker.texID);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
