@@ -14,9 +14,10 @@ ______________________________________________
 
 - `Atividade_01.cpp` – Implementa uma atividade de criação de triângulos com OpenGL.
 - `Atividade_02.cpp` – Movimento de personagem com teclado, camadas de fundo com parallax e limites de movimentação para não sair do cenário.
-- `Atividade_03.cpp` -
+- `GS_Atividade_03.cpp` – Desenho e navegação em um tilemap isométrico (diamond) com movimentação de marcador pelo teclado.
 - `assets/backgrounds` - Pasta com as texturas utilizadas para os backgrounds.
 - `assets/sprites` - Pasta com as texturas utilizadas para os sprites (spritesheets).
+- `assets/tiles` - Pasta com as texturas utilizadas para os tiles.
 
 ______________________________________________
 
@@ -84,9 +85,40 @@ ______________________________________________
 
 ______________________________________________
 
-# C) Atividade Vivencial 03
+# C) Atividade Vivencial 03 - Tilemap Isométrico
 
-### 💡 Sobre o Programa
+## 💡 Sobre o Programa
 
-- (em desenvolvimento)
+- O arquivo `GS_Atividade_03.cpp` implementa um tilemap isométrico no formato diamond, utilizando OpenGL moderno.
+- O mapa é composto por tiles desenhados a partir de um tileset, organizados em uma grade isométrica.
+- Um marcador (tile rosa) indica a posição do jogador no mapa.
+- O usuário pode mover o marcador pelo teclado, navegando entre os tiles do mapa.
+- O cálculo das posições dos tiles e do marcador utiliza a lógica diamond, garantindo alinhamento correto no grid isométrico.
+- O código serve como base para jogos de estratégia, RPGs ou qualquer aplicação que utilize mapas isométricos.
+
+## 🚀 Como funciona
+
+- O tilemap é desenhado usando transformações para posicionar cada tile na tela de acordo com sua linha e coluna, usando as fórmulas:
+  - `x = x0 + (j - i) * (tileWidth / 2.0f)`
+  - `y = y0 + (j + i) * (tileHeight / 2.0f)`
+- O marcador do jogador é desenhado sobre o tile selecionado, usando a mesma lógica de posicionamento.
+- O código utiliza GLFW para eventos de teclado e GLM para transformações.
+
+## 🎮 Controles
+
+- **Seta Cima / W**: Move o marcador para cima (norte)
+- **Seta Baixo / S**: Move o marcador para baixo (sul)
+- **Seta Esquerda / A**: Move o marcador para a esquerda (oeste)
+- **Seta Direita / D**: Move o marcador para a direita (leste)
+- **Q**: Move o marcador para a diagonal noroeste
+- **E**: Move o marcador para a diagonal nordeste
+- **Z**: Move o marcador para a diagonal sudoeste
+- **C**: Move o marcador para a diagonal sudeste
+- **ESC**: Fecha o programa.
+
+## 📌 Observações
+
+- O código pode ser expandido para incluir sprites animados, interação com tiles, ou lógica de jogo.
+- As imagens do tileset devem estar no caminho correto para o funcionamento do programa.
+- O código pode ser facilmente adaptado para diferentes resoluções alterando WIDTH, HEIGHT e a matriz de projeção.
 
