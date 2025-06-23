@@ -286,28 +286,28 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         int new_i = player_i;
         int new_j = player_j;
 
-		if (key == GLFW_KEY_UP || key == GLFW_KEY_W)
+		if (key == GLFW_KEY_UP || key == GLFW_KEY_W) //norte
             new_i--;
 
-		if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A)
+		if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A) //oeste
             new_j--;
 
-        if (key == GLFW_KEY_DOWN || key == GLFW_KEY_S)
+        if (key == GLFW_KEY_DOWN || key == GLFW_KEY_S) //sul
             new_i++;
 
-        if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D)
+        if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D) //leste
             new_j++;
 
-		if (key == GLFW_KEY_C) 
+		if (key == GLFW_KEY_C) //diagonal nordeste
             new_i++; new_j++;
 
-		if (key == GLFW_KEY_E)
+		if (key == GLFW_KEY_E) //diagonal noroeste
             new_i--; new_j++;
 
-        if (key == GLFW_KEY_Z)
+        if (key == GLFW_KEY_Z) //diagonal sudoeste
             new_i++; new_j--;
 
-        if (key == GLFW_KEY_Q)
+        if (key == GLFW_KEY_Q) //diagonal sudeste
             new_i--; new_j--;
 
         if (new_i >= 0 && new_i < TILEMAP_HEIGHT && new_j >= 0 && new_j < TILEMAP_WIDTH) {
@@ -488,6 +488,7 @@ void desenharMapa(GLuint shaderID)
     float x0 = 400;
     float y0 = 100;
 
+    //diamond isometric tilemap
     for(int i=0; i<TILEMAP_HEIGHT; i++)
     {
         for (int j=0; j < TILEMAP_WIDTH; j++)
@@ -495,13 +496,8 @@ void desenharMapa(GLuint shaderID)
             mat4 model = mat4(1);
             Tile curr_tile = tileset[map[i][j]];
 
-            float tileW = curr_tile.dimensions.x;
-            float tileH = curr_tile.dimensions.y;
-
-            float x = x0 + j * tileW;
-            if (i % 2 == 1) x += tileW / 2.0f;
-
-            float y = y0 + i * (tileH / 2.0f);
+            float x = x0 + (j - i) * (curr_tile.dimensions.x / 2.0f);
+            float y = y0 + (j + i) * (curr_tile.dimensions.y / 2.0f);
 
             model = translate(model, vec3(x, y, 0.0));
             model = scale(model, curr_tile.dimensions);
@@ -518,14 +514,13 @@ void desenharMapa(GLuint shaderID)
         }
     }
 
-    //marcando posição do jogador
+    //marcando posição do jogador (diamond)
     Tile marker = tileset[6];
     float tileW = marker.dimensions.x;
     float tileH = marker.dimensions.y;
 
-    float px = x0 + player_j * tileW;
-    if (player_i % 2 == 1) px += tileW / 2.0f;
-    float py = y0 + player_i * (tileH / 2.0f);
+    float px = x0 + (player_j - player_i) * (tileW / 2.0f);
+    float py = y0 + (player_j + player_i) * (tileH / 2.0f);
 
     mat4 model = mat4(1);
     model = translate(model, vec3(px, py, 0.1f));
