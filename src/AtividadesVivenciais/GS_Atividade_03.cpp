@@ -54,7 +54,7 @@ struct Tile
 	vec3 position;
 	vec3 dimensions; //tamanho do losango 2:1
 	float ds, dt;
-	//int iAnimation, iFrame;
+	//int iAnimation, int iFrame;
 	//int nAnimations, nFrames;
 };
 
@@ -68,6 +68,7 @@ int setupShader();
 int setupSprite(int nAnimations, int nFrames, float &ds, float &dt);
 int setupTile(int nTiles, float &ds, float &dt);
 int loadTexture(string filePath, int &width, int &height);
+
 void desenharMapa(GLuint shaderID);
 
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -81,7 +82,7 @@ const GLchar *vertexShaderSource = R"(
  uniform mat4 projection;
  void main()
  {
-	tex_coord = vec2(texc.s, 1.0 - texc.t);
+	tex_coord = texc;
 	gl_Position = projection * model * vec4(position, 1.0);
  }
  )";
@@ -109,6 +110,7 @@ int map[3][3] = {
 };
 
 vector <Tile> tileset;
+Sprite vampirao;
 
 int main()
 {
@@ -159,18 +161,17 @@ int main()
 	GLuint shaderID = setupShader();
 
 	int imgWidth, imgHeight;
-	//GLuint texID = loadTexture("../assets/sprites/Vampires1_Walk_full.png",imgWidth,imgHeight);
 	GLuint texID = loadTexture("../assets/tilesets/tilesetIso.png",imgWidth,imgHeight);
-	// Gerando um buffer simples, com a geometria de um triângulo
-	/* Sprite vampirao;
+	GLuint texID_vamp = loadTexture("../assets/sprites/Vampires1_Walk_full.png", imgWidth, imgHeight);
+
 	vampirao.nAnimations = 4;
 	vampirao.nFrames = 6;
-	vampirao.VAO = setupSprite(vampirao.nAnimations,vampirao.nFrames,vampirao.ds,vampirao.dt);
-	vampirao.position = vec3(400.0, 150.0, 0.0);
-	vampirao.dimensions = vec3(imgWidth/vampirao.nFrames*4,imgHeight/vampirao.nAnimations*4,1.0);
-	vampirao.texID = texID;
+	vampirao.VAO = setupSprite(vampirao.nAnimations, vampirao.nFrames, vampirao.ds, vampirao.dt);
+	vampirao.position = vec3(0.0, 0.0, 0.0);
+	vampirao.dimensions = vec3((float)imgWidth / vampirao.nFrames, (float)imgHeight / vampirao.nAnimations, 1.0f);
+	vampirao.texID = texID_vamp;
 	vampirao.iAnimation = 1;
-	vampirao.iFrame = 0; */
+	vampirao.iFrame = 0;
 
 	for (int i=0; i < 7; i++)
 	{
@@ -182,8 +183,6 @@ int main()
 		tileset.push_back(tile);
 	}
 
-
-
 	glUseProgram(shaderID);
 
 	double prev_s = glfwGetTime();
@@ -192,6 +191,9 @@ int main()
 	float colorValue = 0.0;
 
 	glActiveTexture(GL_TEXTURE0);
+
+	mat4 model;
+	vec2 offsetTex;
 
 	glUniform1i(glGetUniformLocation(shaderID, "tex_buff"), 0);
 
@@ -240,19 +242,15 @@ int main()
 
 		desenharMapa(shaderID);
 
-		// Desenho do vampirao
-		// Matriz de transformaçao do objeto - Matriz de modelo
-		/* model = mat4(1); //matriz identidade
+		model = mat4(1);
 		model = translate(model,vampirao.position);
 		model = rotate(model, radians(0.0f), vec3(0.0, 0.0, 1.0));
 		model = scale(model,vampirao.dimensions);
 		glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
 
-		vec2 offsetTex;
-
 		if (deltaT >= 1.0/FPS)
 		{
-			vampirao.iFrame = (vampirao.iFrame + 1) % vampirao.nFrames; // incremento "circular"
+			vampirao.iFrame = (vampirao.iFrame + 1) % vampirao.nFrames;
 			lastTime = currTime;
 		}
 
@@ -260,13 +258,10 @@ int main()
 		offsetTex.t = 0.0;
 		glUniform2f(glGetUniformLocation(shaderID, "offsetTex"),offsetTex.s, offsetTex.t);
 
-		glBindVertexArray(vampirao.VAO); // Conectando ao buffer de geometria
-		glBindTexture(GL_TEXTURE_2D, vampirao.texID); // Conectando ao buffer de textura
+		glBindVertexArray(vampirao.VAO);
+		glBindTexture(GL_TEXTURE_2D, vampirao.texID);
 
-		// Chamada de desenho - drawcall
-		// Poligono Preenchido - GL_TRIANGLES
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); */
-		//---------------------------------------------------------------------------
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 		glfwSwapBuffers(window);
 	}
@@ -540,4 +535,18 @@ void desenharMapa(GLuint shaderID)
     glBindVertexArray(marker.VAO);
     glBindTexture(GL_TEXTURE_2D, marker.texID);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	//calculando o centro do tile de deslocamento
+	model = mat4(1);
+	model = translate(model, vec3(px + tileW / 2.0f, py + tileH / 2.0f, 0.2f));
+	model = scale(model, vampirao.dimensions);
+	glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+
+	offsetTex.s = vampirao.iFrame * vampirao.ds;
+	offsetTex.t = vampirao.iAnimation * vampirao.dt;
+	glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
+
+	glBindVertexArray(vampirao.VAO);
+	glBindTexture(GL_TEXTURE_2D, vampirao.texID);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
