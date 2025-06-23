@@ -286,34 +286,29 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         int new_i = player_i;
         int new_j = player_j;
 
-        if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D)
-            new_j++;
-
-        if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A)
-            new_j--;
-
-        if (key == GLFW_KEY_UP || key == GLFW_KEY_W)
+		if (key == GLFW_KEY_UP || key == GLFW_KEY_W)
             new_i--;
+
+		if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A)
+            new_j--;
 
         if (key == GLFW_KEY_DOWN || key == GLFW_KEY_S)
             new_i++;
 
-        if (key == GLFW_KEY_Q)
-        {
-            new_i--; new_j--;
-        }
-        if (key == GLFW_KEY_E)
-        {
-            new_i--; new_j++;
-        }
-        if (key == GLFW_KEY_Z)
-        {
-            new_i++; new_j--;
-        }
-        if (key == GLFW_KEY_C)
-        {
+        if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D)
+            new_j++;
+
+		if (key == GLFW_KEY_C) 
             new_i++; new_j++;
-        }
+
+		if (key == GLFW_KEY_E)
+            new_i--; new_j++;
+
+        if (key == GLFW_KEY_Z)
+            new_i++; new_j--;
+
+        if (key == GLFW_KEY_Q)
+            new_i--; new_j--;
 
         if (new_i >= 0 && new_i < TILEMAP_HEIGHT && new_j >= 0 && new_j < TILEMAP_WIDTH) {
 			player_i = new_i;
