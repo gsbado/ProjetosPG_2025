@@ -66,6 +66,7 @@ set(EXERCISES
     DesafioM3/JogoDasCores
     DesafioM4/DesafioSprites
     DesafioM5/AnimaSprites
+    GS_IntegralizaçãoGrauB/AtividadeFinalGB
 )
 
 add_compile_options(-Wno-pragmas)
