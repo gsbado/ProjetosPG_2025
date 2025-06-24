@@ -1,4 +1,4 @@
-/* Desenho e Navegação em Tilemap Isométrico
+/* Jogo: Mochi's Journey
 *      Código adaptado de:
  *   - https://learnopengl.com/#!Getting-started/Hello-Triangle
  *   - https://antongerdelan.net/opengl/glcontext2.html
@@ -6,7 +6,7 @@
  * Modificado por Gabriela Spanemberg Bado e Sadi Júnior
  * para a disciplina de Processamento Gráfico - Unisinos
  * Versão inicial: 7/4/2017
- * Última atualização em 22/06/2025
+ * Última atualização em 23/06/2025
  *
  */
 
@@ -38,7 +38,7 @@ using namespace glm;
 struct Sprite
 {
 	GLuint VAO;
-	GLuint texID;
+	GLuint textureID;
 	vec3 position;
 	vec3 dimensions;
 	float ds, dt;
@@ -69,8 +69,9 @@ int setupSprite(int nAnimations, int nFrames, float &ds, float &dt);
 int setupTile(int nTiles, float &ds, float &dt);
 int loadTexture(string filePath, int &width, int &height);
 void desenharMapa(GLuint shaderID);
+void desenharMochi(GLuint shaderID);
 
-const GLuint WIDTH = 800, HEIGHT = 600;
+const unsigned int WIDTH = 800, HEIGHT = 600;
 
 const GLchar *vertexShaderSource = R"(
  #version 400
@@ -109,6 +110,7 @@ int map[3][3] = {
 };
 
 vector <Tile> tileset;
+Sprite mochi;
 
 int main()
 {
@@ -130,7 +132,7 @@ int main()
 	//	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	// #endif
 
-	GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Ola  -- Rossana", nullptr, nullptr);
+	GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Mochi's Journey --Gabriela e Sadi", nullptr, nullptr);
 	if (!window)
 	{
 		std::cerr << "Falha ao criar a janela GLFW" << std::endl;
@@ -159,18 +161,18 @@ int main()
 	GLuint shaderID = setupShader();
 
 	int imgWidth, imgHeight;
-	//GLuint texID = loadTexture("../assets/sprites/Vampires1_Walk_full.png",imgWidth,imgHeight);
+	GLuint textureID = loadTexture("../assets/sprites/Mochi/Idle/Slime1_Idle_full.png",imgWidth,imgHeight);
 	GLuint texID = loadTexture("../assets/tilesets/tilesetIso.png",imgWidth,imgHeight);
-	// Gerando um buffer simples, com a geometria de um triângulo
-	/* Sprite vampirao;
-	vampirao.nAnimations = 4;
-	vampirao.nFrames = 6;
-	vampirao.VAO = setupSprite(vampirao.nAnimations,vampirao.nFrames,vampirao.ds,vampirao.dt);
-	vampirao.position = vec3(400.0, 150.0, 0.0);
-	vampirao.dimensions = vec3(imgWidth/vampirao.nFrames*4,imgHeight/vampirao.nAnimations*4,1.0);
-	vampirao.texID = texID;
-	vampirao.iAnimation = 1;
-	vampirao.iFrame = 0; */
+
+
+    mochi.nAnimations = 4;
+    mochi.nFrames = 6;
+    mochi.VAO = setupSprite(mochi.nAnimations, mochi.nFrames, mochi.ds, mochi.dt);
+    mochi.position = vec3(0.0, 0.0, 0.0);
+    mochi.dimensions = vec3((imgWidth / mochi.nFrames) * 3.0f, (imgHeight / mochi.nAnimations) * 3.0f, 1.0f);
+    mochi.textureID = textureID;
+    mochi.iAnimation = 3; //assim, ele começa parado olhando pra frente
+    mochi.iFrame = 0; //primeiro frame da animação
 
 	for (int i=0; i < 7; i++)
 	{
@@ -239,35 +241,7 @@ int main()
 		glPointSize(20);
 
 		desenharMapa(shaderID);
-
-		// Desenho do vampirao
-		// Matriz de transformaçao do objeto - Matriz de modelo
-		/* model = mat4(1); //matriz identidade
-		model = translate(model,vampirao.position);
-		model = rotate(model, radians(0.0f), vec3(0.0, 0.0, 1.0));
-		model = scale(model,vampirao.dimensions);
-		glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
-
-		vec2 offsetTex;
-
-		if (deltaT >= 1.0/FPS)
-		{
-			vampirao.iFrame = (vampirao.iFrame + 1) % vampirao.nFrames; // incremento "circular"
-			lastTime = currTime;
-		}
-
-		offsetTex.s = vampirao.iFrame * vampirao.ds;
-		offsetTex.t = 0.0;
-		glUniform2f(glGetUniformLocation(shaderID, "offsetTex"),offsetTex.s, offsetTex.t);
-
-		glBindVertexArray(vampirao.VAO); // Conectando ao buffer de geometria
-		glBindTexture(GL_TEXTURE_2D, vampirao.texID); // Conectando ao buffer de textura
-
-		// Chamada de desenho - drawcall
-		// Poligono Preenchido - GL_TRIANGLES
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); */
-		//---------------------------------------------------------------------------
-
+		desenharMochi(shaderID);
 		glfwSwapBuffers(window);
 	}
 		
@@ -534,5 +508,32 @@ void desenharMapa(GLuint shaderID)
 
     glBindVertexArray(marker.VAO);
     glBindTexture(GL_TEXTURE_2D, marker.texID);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+void desenharMochi(GLuint shaderID) {
+    Tile refTile = tileset[0]; //aqui utilizamos o dimensionamento do tile como referência
+
+    float x0 = 400;
+    float y0 = 100;
+
+    float px = x0 + (player_j - player_i) * (refTile.dimensions.x / 2.0f);
+    float py = y0 + (player_j + player_i) * (refTile.dimensions.y / 2.0f);
+
+    mat4 model = mat4(1);
+    model = translate(model, vec3(px, py, 0.2f));
+    model = scale(model, mochi.dimensions);
+
+    glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+
+    //cálculo do offset da animação no sprite
+    vec2 offsetTex;
+    offsetTex.s = mochi.iFrame * mochi.ds;
+    offsetTex.t = (mochi.nAnimations - 1 - mochi.iAnimation) * mochi.dt;
+
+    glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
+
+    glBindVertexArray(mochi.VAO);
+    glBindTexture(GL_TEXTURE_2D, mochi.textureID);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
