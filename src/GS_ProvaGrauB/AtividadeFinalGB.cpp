@@ -15,26 +15,20 @@
 #include <assert.h>
 #include <cmath>
 
-using namespace std;
+// ---- HEADERS GLFW, GLAD, GLM, STB_IMAGE ---- 
 
-// GLAD
 #include <glad/glad.h>
-
-// GLFW
 #include <GLFW/glfw3.h>
-
-// STB_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
-//GLM
 #include <glm/glm.hpp> 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+using namespace std;
 using namespace glm;
 
-
+// ---- STRUCTS ---- 
 struct Sprite
 {
 	GLuint VAO;
@@ -58,12 +52,29 @@ struct Tile
 	//int nAnimations, nFrames;
 };
 
+// ---- VARIÁVEIS GLOBAIS ---- 
+
+const unsigned int WIDTH = 800, HEIGHT = 600;
+
 //posições iniciais do sprite no mapa
 int player_i = 0;
 int player_j = 0;
 
-void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
+ #define TILEMAP_WIDTH 3
+ #define TILEMAP_HEIGHT 3
+int map[3][3] = {
+1, 1, 4,
+4, 1, 4,
+4, 4, 1
+};
 
+vector <Tile> tileset;
+Sprite mochi;
+
+
+// ---- DECLARAÇÃO DE FUNÇÕES ---- 
+
+void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 int setupShader();
 int setupSprite(int nAnimations, int nFrames, float &ds, float &dt);
 int setupTile(int nTiles, float &ds, float &dt);
@@ -71,7 +82,7 @@ int loadTexture(string filePath, int &width, int &height);
 void desenharMapa(GLuint shaderID);
 void desenharMochi(GLuint shaderID);
 
-const unsigned int WIDTH = 800, HEIGHT = 600;
+// ---- SHADERS ---- 
 
 const GLchar *vertexShaderSource = R"(
  #version 400
@@ -101,17 +112,7 @@ const GLchar *fragmentShaderSource = R"(
  )";
 
 
- #define TILEMAP_WIDTH 3
- #define TILEMAP_HEIGHT 3
-int map[3][3] = {
-1, 1, 4,
-4, 1, 4,
-4, 4, 1
-};
-
-vector <Tile> tileset;
-Sprite mochi;
-
+// ---- FUNÇÃO MAIN ---- 
 int main()
 {
 	glfwInit();
@@ -249,6 +250,8 @@ int main()
 	return 0;
 }
 
+// ---- IMPLEMENTAÇÃO DAS FUNÇÕES
+
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
     float moveSpeed = 1.0f;
@@ -291,6 +294,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
 }
 
+//compila e linka os shaders para criar o programa de shader OpenGL
 int setupShader()
 {
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -337,6 +341,7 @@ int setupShader()
 	return shaderProgram;
 }
 
+//configura o VAO para um sprite quadrado
 int setupSprite(int nAnimations, int nFrames, float &ds, float &dt)
 {
 
@@ -375,6 +380,7 @@ int setupSprite(int nAnimations, int nFrames, float &ds, float &dt)
 	return VAO;
 }
 
+//configura o VAO para um tile isométrico diamond
 int setupTile(int nTiles, float &ds, float &dt)
 {
     
@@ -416,6 +422,7 @@ int setupTile(int nTiles, float &ds, float &dt)
 	return VAO;
 }
 
+//carrega uma imagem de arquivo e transforma em textura OpenGL
 int loadTexture(string filePath, int &width, int &height)
 {
 	GLuint texID;
@@ -457,6 +464,7 @@ int loadTexture(string filePath, int &width, int &height)
 	return texID;
 }
 
+//renderiza o tilemap isométrico, desenhando cada tile na sua posição
 void desenharMapa(GLuint shaderID)
 {
     float x0 = 400;
@@ -511,6 +519,7 @@ void desenharMapa(GLuint shaderID)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
+//renderiza o sprite do personagem Mochi no tilemap
 void desenharMochi(GLuint shaderID) {
     Tile refTile = tileset[0]; //aqui utilizamos o dimensionamento do tile como referência
 
