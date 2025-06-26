@@ -60,6 +60,12 @@ struct Sprite
 	int iAnimation, iFrame;
 	int nAnimations, nFrames;
 };
+
+struct Mochi {
+	Sprite sprite;
+	bool died;
+	double diedAt;
+};
 	
 struct Tile
 {
@@ -90,7 +96,7 @@ int player_i = 0;
 int player_j = 0;
 
 TileMap tilemap;
-Sprite mochi;
+Mochi mochi;
 
 // ---- DECLARAÇÃO DE FUNÇÕES ---- 
 
@@ -186,14 +192,14 @@ int main()
 	int imgWidth, imgHeight;
 	GLuint textureID = loadTexture("../assets/sprites/Mochi/Idle/Slime1_Idle_full.png",imgWidth,imgHeight);
 
-    mochi.nAnimations = 4;
-    mochi.nFrames = 6;
-    mochi.VAO = setupSprite(mochi.nAnimations, mochi.nFrames, mochi.ds, mochi.dt);
-    mochi.position = vec3(0.0, 0.0, 0.0);
-    mochi.dimensions = vec3((imgWidth / mochi.nFrames) * 3.0f, (imgHeight / mochi.nAnimations) * 3.0f, 1.0f);
-    mochi.textureID = textureID;
-    mochi.iAnimation = 3; //assim, ele começa parado olhando pra frente
-    mochi.iFrame = 0; //primeiro frame da animação
+    mochi.sprite.nAnimations = 4;
+    mochi.sprite.nFrames = 6;
+    mochi.sprite.VAO = setupSprite(mochi.sprite.nAnimations, mochi.sprite.nFrames, mochi.sprite.ds, mochi.sprite.dt);
+    mochi.sprite.position = vec3(0.0, 0.0, 0.0);
+    mochi.sprite.dimensions = vec3((imgWidth / mochi.sprite.nFrames) * 3.0f, (imgHeight / mochi.sprite.nAnimations) * 3.0f, 1.0f);
+    mochi.sprite.textureID = textureID;
+    mochi.sprite.iAnimation = 3; //assim, ele começa parado olhando pra frente
+    mochi.sprite.iFrame = 0; //primeiro frame da animação
 
 	// le o arquivo de mapa e inicializa o tilemap
 	string tileImagePath;
@@ -567,21 +573,21 @@ void desenharMochi(GLuint shaderID, const TileMap& tilemap) {
     mat4 model = mat4(1);
 
     float mochi_x_position = px + (tileW / 2.0f);
-    float mochi_y_position = py + tileH - (mochi.dimensions.y / 2.0f) + 40.0f;
+    float mochi_y_position = py + tileH - (mochi.sprite.dimensions.y / 2.0f) + 40.0f;
 
     model = translate(model, vec3(mochi_x_position, mochi_y_position, 0.2f));
-    model = scale(model, mochi.dimensions);
+    model = scale(model, mochi.sprite.dimensions);
 
     glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
 	//cálculo do offset da animação no sprite
     vec2 offsetTex;
-    offsetTex.s = mochi.iFrame * mochi.ds;
-    offsetTex.t = (mochi.nAnimations - 1 - mochi.iAnimation) * mochi.dt;
+    offsetTex.s = mochi.sprite.iFrame * mochi.sprite.ds;
+    offsetTex.t = (mochi.sprite.nAnimations - 1 - mochi.sprite.iAnimation) * mochi.sprite.dt;
 
     glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
 
-    glBindVertexArray(mochi.VAO);
-    glBindTexture(GL_TEXTURE_2D, mochi.textureID);
+    glBindVertexArray(mochi.sprite.VAO);
+    glBindTexture(GL_TEXTURE_2D, mochi.sprite.textureID);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
