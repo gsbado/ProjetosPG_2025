@@ -66,6 +66,9 @@ struct TileMap {
 
 const GLuint WINDOW_WIDTH = 1850, WINDOW_HEIGHT = 900;
 
+const int WATER_TILE = 5;
+const int PLAYER_TILE = 6;
+
 //posições iniciais do sprite no mapa
 int player_i = 0;
 int player_j = 0;
@@ -285,10 +288,17 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         if (key == GLFW_KEY_Q) //diagonal sudeste
             new_i--; new_j--;
 
-        if (new_i >= 0 && new_i < tilemap.height && new_j >= 0 && new_j < tilemap.width) {
-			player_i = new_i;
-			player_j = new_j;
+		if (new_i < 0 || new_i >= tilemap.height || new_j < 0 || new_j >= tilemap.width) {
+			return;
 		}
+	
+		// verifica se o tile é caminhável (não é água)
+		if (tilemap.map[new_i][new_j] == WATER_TILE) {
+			return;
+		}
+
+		player_i = new_i;
+		player_j = new_j;
     }
 }
 
@@ -498,7 +508,7 @@ void desenharMapa(GLuint shaderID, const TileMap& tilemap) {
     }
 
 	// marcando a posição do jogador (diamond)
-    const Tile& marker = tilemap.tileset[6];
+    const Tile& marker = tilemap.tileset[PLAYER_TILE];
 
     float px = x0 + (player_j - player_i) * (tileW / 2.0f);
     float py = y0 + (player_j + player_i) * (tileH / 2.0f);
