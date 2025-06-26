@@ -14,6 +14,9 @@
 #include <string>
 #include <assert.h>
 #include <cmath>
+#include <iostream>
+#include <fstream>
+#include <vector>
 
 // ---- HEADERS GLFW, GLAD, GLM, STB_IMAGE ---- 
 
@@ -52,6 +55,13 @@ struct Tile
 	//int nAnimations, nFrames;
 };
 
+struct TileMap {
+    int width;
+    int height;
+    vector<vector<int>> map;
+    vector<Tile> tileset;
+};
+
 // ---- VARIÁVEIS GLOBAIS ---- 
 
 const unsigned int WIDTH = 800, HEIGHT = 600;
@@ -60,17 +70,8 @@ const unsigned int WIDTH = 800, HEIGHT = 600;
 int player_i = 0;
 int player_j = 0;
 
- #define TILEMAP_WIDTH 3
- #define TILEMAP_HEIGHT 3
-int map[3][3] = {
-1, 1, 4,
-4, 1, 4,
-4, 4, 1
-};
-
-vector <Tile> tileset;
+TileMap tilemap;
 Sprite mochi;
-
 
 // ---- DECLARAÇÃO DE FUNÇÕES ---- 
 
@@ -79,8 +80,10 @@ int setupShader();
 int setupSprite(int nAnimations, int nFrames, float &ds, float &dt);
 int setupTile(int nTiles, float &ds, float &dt);
 int loadTexture(string filePath, int &width, int &height);
-void desenharMapa(GLuint shaderID);
-void desenharMochi(GLuint shaderID);
+void desenharMapa(GLuint shaderID, const TileMap& tilemap);
+void desenharMochi(GLuint shaderID, const TileMap& tilemap);
+bool carregarMapa(const string& mapPath, string& tileImagePath, int& nTiles, int& tileH, int& tileW, TileMap& tilemap);
+void inicializarTilemap(const string& tileImagePath, int nTiles, int tileH, int tileW, TileMap& tilemap);
 
 // ---- SHADERS ---- 
 
@@ -175,17 +178,14 @@ int main()
     mochi.iAnimation = 3; //assim, ele começa parado olhando pra frente
     mochi.iFrame = 0; //primeiro frame da animação
 
-	for (int i=0; i < 7; i++)
+	// le o arquivo de mapa e inicializa o tilemap
+	string tileImagePath;
+	int nTiles, tileH, tileW;
+	if (!carregarMapa("../src/GS_ProvaGrauB/map.txt", tileImagePath, nTiles, tileH, tileW, tilemap))
 	{
-		Tile tile;
-		tile.dimensions = vec3(114,57,1.0);
-		tile.iTile = i;
-		tile.texID = texID;
-		tile.VAO = setupTile(7,tile.ds,tile.dt);
-		tileset.push_back(tile);
+		return -1;
 	}
-
-
+	inicializarTilemap(tileImagePath, nTiles, tileH, tileW, tilemap);
 
 	glUseProgram(shaderID);
 
@@ -241,8 +241,8 @@ int main()
 		glLineWidth(10);
 		glPointSize(20);
 
-		desenharMapa(shaderID);
-		desenharMochi(shaderID);
+		desenharMapa(shaderID, tilemap);
+		desenharMochi(shaderID, tilemap);
 		glfwSwapBuffers(window);
 	}
 		
@@ -287,7 +287,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         if (key == GLFW_KEY_Q) //diagonal sudeste
             new_i--; new_j--;
 
-        if (new_i >= 0 && new_i < TILEMAP_HEIGHT && new_j >= 0 && new_j < TILEMAP_WIDTH) {
+        if (new_i >= 0 && new_i < tilemap.height && new_j >= 0 && new_j < tilemap.width) {
 			player_i = new_i;
 			player_j = new_j;
 		}
@@ -464,19 +464,16 @@ int loadTexture(string filePath, int &width, int &height)
 	return texID;
 }
 
-//renderiza o tilemap isométrico, desenhando cada tile na sua posição
-void desenharMapa(GLuint shaderID)
-{
+// renderiza o tilemap isométrico, desenhando cada tile na sua posição.
+void desenharMapa(GLuint shaderID, const TileMap& tilemap) {
     float x0 = 400;
     float y0 = 100;
 
-    //diamond isometric tilemap
-    for(int i=0; i<TILEMAP_HEIGHT; i++)
-    {
-        for (int j=0; j < TILEMAP_WIDTH; j++)
-        {
+	// diamond isometric tilemap
+    for (int i = 0; i < tilemap.height; i++) {
+        for (int j = 0; j < tilemap.width; j++) {
             mat4 model = mat4(1);
-            Tile curr_tile = tileset[map[i][j]];
+            const Tile& curr_tile = tilemap.tileset[tilemap.map[i][j]];
 
             float x = x0 + (j - i) * (curr_tile.dimensions.x / 2.0f);
             float y = y0 + (j + i) * (curr_tile.dimensions.y / 2.0f);
@@ -496,8 +493,8 @@ void desenharMapa(GLuint shaderID)
         }
     }
 
-    //marcando posição do jogador (diamond)
-    Tile marker = tileset[6];
+	// marcando a posição do jogador (diamond)
+    const Tile& marker = tilemap.tileset[6];
     float tileW = marker.dimensions.x;
     float tileH = marker.dimensions.y;
 
@@ -520,8 +517,8 @@ void desenharMapa(GLuint shaderID)
 }
 
 //renderiza o sprite do personagem Mochi no tilemap
-void desenharMochi(GLuint shaderID) {
-    Tile refTile = tileset[0]; //aqui utilizamos o dimensionamento do tile como referência
+void desenharMochi(GLuint shaderID, const TileMap& tilemap) {
+    Tile refTile = tilemap.tileset[0]; //aqui utilizamos o dimensionamento do tile como referência
 
     float x0 = 400;
     float y0 = 100;
@@ -545,4 +542,38 @@ void desenharMochi(GLuint shaderID) {
     glBindVertexArray(mochi.VAO);
     glBindTexture(GL_TEXTURE_2D, mochi.textureID);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+bool carregarMapa(const string& mapPath, string& tileImagePath, int& nTiles, int& tileH, int& tileW, TileMap& tilemap) {
+    std::ifstream file(mapPath);
+    if (!file.is_open()) {
+        cerr << "Erro ao abrir o arquivo de mapa: " << mapPath << endl;
+        return false;
+    }
+
+    file >> tileImagePath >> nTiles >> tileH >> tileW;
+
+    file >> tilemap.width >> tilemap.height;
+    tilemap.map.resize(tilemap.height, vector<int>(tilemap.width));
+
+    for (int i = 0; i < tilemap.height; ++i)
+        for (int j = 0; j < tilemap.width; ++j)
+            file >> tilemap.map[i][j];
+
+    return true;
+}
+
+void inicializarTilemap(const string& tileImagePath, int nTiles, int tileH, int tileW, TileMap& tilemap) {
+    int imgWidth, imgHeight;
+    GLuint texID = loadTexture(tileImagePath, imgWidth, imgHeight);
+
+    tilemap.tileset.clear();
+    for (int i = 0; i < nTiles; ++i) {
+        Tile tile;
+        tile.dimensions = vec3(tileW, tileH, 1.0);
+        tile.iTile = i;
+        tile.texID = texID;
+        tile.VAO = setupTile(nTiles, tile.ds, tile.dt);
+        tilemap.tileset.push_back(tile);
+    }
 }
