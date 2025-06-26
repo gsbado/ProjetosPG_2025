@@ -254,6 +254,13 @@ int main()
 
 				title_countdown_s = 0.1;
 			}
+
+			// se o mochi morreu e passou mais de 2 segundos, reseta a posição do jogador
+			if (mochi.died && curr_s - mochi.diedAt > 2.0) {
+				player_i = 0;
+				player_j = 0;
+				mochi.died = false;
+			}
 		}
 
 		glfwPollEvents();
@@ -281,6 +288,11 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+
+	// se o mochi morreu, não pode se mover
+	if (mochi.died) {
+		return;
+	}
 
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
         int new_i = player_i;
@@ -322,10 +334,8 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 		// verifica se o tile é lava
 		// se for lava, o jogador volta para a posição inicial
 		if (tilemap.mapMetadata[new_i][new_j] == TileMetadataType::Lethal) {
-			new_i = 0;
-			new_j = 0;
-
-			// TODO: mochi perde uma vida?
+			mochi.died = true;
+			mochi.diedAt = glfwGetTime();
 		}
 
 		player_i = new_i;
