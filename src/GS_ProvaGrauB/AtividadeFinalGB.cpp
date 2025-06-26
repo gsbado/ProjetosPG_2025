@@ -64,7 +64,7 @@ struct TileMap {
 
 // ---- VARIÁVEIS GLOBAIS ---- 
 
-const unsigned int WIDTH = 800, HEIGHT = 600;
+const GLuint WINDOW_WIDTH = 1850, WINDOW_HEIGHT = 900;
 
 //posições iniciais do sprite no mapa
 int player_i = 0;
@@ -136,7 +136,7 @@ int main()
 	//	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	// #endif
 
-	GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Mochi's Journey --Gabriela e Sadi", nullptr, nullptr);
+	GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Mochi's Journey --Gabriela e Sadi", nullptr, nullptr);
 	if (!window)
 	{
 		std::cerr << "Falha ao criar a janela GLFW" << std::endl;
@@ -166,8 +166,6 @@ int main()
 
 	int imgWidth, imgHeight;
 	GLuint textureID = loadTexture("../assets/sprites/Mochi/Idle/Slime1_Idle_full.png",imgWidth,imgHeight);
-	GLuint texID = loadTexture("../assets/tilesets/tilesetIso.png",imgWidth,imgHeight);
-
 
     mochi.nAnimations = 4;
     mochi.nFrames = 6;
@@ -198,7 +196,7 @@ int main()
 
 	glUniform1i(glGetUniformLocation(shaderID, "tex_buff"), 0);
 
-	mat4 projection = ortho(0.0, 800.0, 600.0, 0.0, -1.0, 1.0);
+	mat4 projection = ortho(0.0, (double)WINDOW_WIDTH, (double)WINDOW_HEIGHT, 0.0, -1.0, 1.0);
 	glUniformMatrix4fv(glGetUniformLocation(shaderID, "projection"), 1, GL_FALSE, value_ptr(projection));
 
 	glEnable(GL_DEPTH_TEST);
@@ -466,9 +464,15 @@ int loadTexture(string filePath, int &width, int &height)
 
 // renderiza o tilemap isométrico, desenhando cada tile na sua posição.
 void desenharMapa(GLuint shaderID, const TileMap& tilemap) {
-    float x0 = 400;
-    float y0 = 100;
-
+	float tileW = tilemap.tileset[0].dimensions.x;
+	float tileH = tilemap.tileset[0].dimensions.y;
+	
+	float centerMapX = (tilemap.width - tilemap.height) * (tileW / 2.0f);
+	float centerMapY = (tilemap.width + tilemap.height) * (tileH / 2.0f);
+	
+	float x0 = (WINDOW_WIDTH  / 2.0f) - (centerMapX / 2.0f);
+	float y0 = (WINDOW_HEIGHT / 2.0f) - (centerMapY / 2.0f);
+	
 	// diamond isometric tilemap
     for (int i = 0; i < tilemap.height; i++) {
         for (int j = 0; j < tilemap.width; j++) {
@@ -495,8 +499,6 @@ void desenharMapa(GLuint shaderID, const TileMap& tilemap) {
 
 	// marcando a posição do jogador (diamond)
     const Tile& marker = tilemap.tileset[6];
-    float tileW = marker.dimensions.x;
-    float tileH = marker.dimensions.y;
 
     float px = x0 + (player_j - player_i) * (tileW / 2.0f);
     float py = y0 + (player_j + player_i) * (tileH / 2.0f);
@@ -518,13 +520,17 @@ void desenharMapa(GLuint shaderID, const TileMap& tilemap) {
 
 //renderiza o sprite do personagem Mochi no tilemap
 void desenharMochi(GLuint shaderID, const TileMap& tilemap) {
-    Tile refTile = tilemap.tileset[0]; //aqui utilizamos o dimensionamento do tile como referência
+	float tileW = tilemap.tileset[0].dimensions.x;
+	float tileH = tilemap.tileset[0].dimensions.y;
+	
+	float centerMapX = (tilemap.width - tilemap.height) * (tileW / 2.0f);
+	float centerMapY = (tilemap.width + tilemap.height) * (tileH / 2.0f);
+	
+	float x0 = (WINDOW_WIDTH  / 2.0f) - (centerMapX / 2.0f);
+	float y0 = (WINDOW_HEIGHT / 2.0f) - (centerMapY / 2.0f);
 
-    float x0 = 400;
-    float y0 = 100;
-
-    float px = x0 + (player_j - player_i) * (refTile.dimensions.x / 2.0f);
-    float py = y0 + (player_j + player_i) * (refTile.dimensions.y / 2.0f);
+    float px = x0 + (player_j - player_i) * (tileW / 2.0f);
+    float py = y0 + (player_j + player_i) * (tileH / 2.0f);
 
     mat4 model = mat4(1);
     model = translate(model, vec3(px, py, 0.2f));
