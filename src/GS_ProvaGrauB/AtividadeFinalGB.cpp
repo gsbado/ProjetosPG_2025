@@ -31,6 +31,24 @@
 using namespace std;
 using namespace glm;
 
+// ---- ENUMS ----
+
+enum TileType {
+	Sand = 0,
+	Grass = 1,
+	Dirt = 2,
+	Lava = 3,
+	Ice = 4,
+	Water = 5,
+	Player = 6,
+};
+
+enum TileMetadataType {
+	Walkable = 0,
+	NonWalkable = 1,
+	Lethal = 2,
+};
+
 // ---- STRUCTS ---- 
 struct Sprite
 {
@@ -58,17 +76,14 @@ struct Tile
 struct TileMap {
     int width;
     int height;
-    vector<vector<int>> map;
+    vector<vector<TileType>> map;
+	vector<vector<TileMetadataType>> mapMetadata;
     vector<Tile> tileset;
 };
 
 // ---- VARIÁVEIS GLOBAIS ---- 
 
 const GLuint WINDOW_WIDTH = 1850, WINDOW_HEIGHT = 900;
-
-const int LAVA_TILE = 3;
-const int WATER_TILE = 5;
-const int PLAYER_TILE = 6;
 
 //posições iniciais do sprite no mapa
 int player_i = 0;
@@ -294,13 +309,13 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 		}
 	
 		// verifica se o tile é caminhável (não é água)
-		if (tilemap.map[new_i][new_j] == WATER_TILE) {
+		if (tilemap.mapMetadata[new_i][new_j] == TileMetadataType::NonWalkable) {
 			return;
 		}
 
 		// verifica se o tile é lava
 		// se for lava, o jogador volta para a posição inicial
-		if (tilemap.map[new_i][new_j] == LAVA_TILE) {
+		if (tilemap.mapMetadata[new_i][new_j] == TileMetadataType::Lethal) {
 			new_i = 0;
 			new_j = 0;
 
@@ -518,7 +533,7 @@ void desenharMapa(GLuint shaderID, const TileMap& tilemap) {
     }
 
 	// marcando a posição do jogador (diamond)
-    const Tile& marker = tilemap.tileset[PLAYER_TILE];
+    const Tile& marker = tilemap.tileset[TileType::Player];
 
     float px = x0 + (player_j - player_i) * (tileW / 2.0f);
     float py = y0 + (player_j + player_i) * (tileH / 2.0f);
@@ -580,11 +595,24 @@ bool carregarMapa(const string& mapPath, string& tileImagePath, int& nTiles, int
     file >> tileImagePath >> nTiles >> tileH >> tileW;
 
     file >> tilemap.width >> tilemap.height;
-    tilemap.map.resize(tilemap.height, vector<int>(tilemap.width));
+    tilemap.map.resize(tilemap.height, vector<TileType>(tilemap.width));
+    tilemap.mapMetadata.resize(tilemap.height, vector<TileMetadataType>(tilemap.width));
 
-    for (int i = 0; i < tilemap.height; ++i)
-        for (int j = 0; j < tilemap.width; ++j)
-            file >> tilemap.map[i][j];
+    for (int i = 0; i < tilemap.height; ++i) {
+        for (int j = 0; j < tilemap.width; ++j) {
+			int tileNum;
+			file >> tileNum;
+            tilemap.map[i][j] = static_cast<TileType>(tileNum);
+		}
+	}
+
+	for (int i = 0; i < tilemap.height; ++i) {
+		for (int j = 0; j < tilemap.width; ++j) {
+			int metadataNum;
+			file >> metadataNum;
+			tilemap.mapMetadata[i][j] = static_cast<TileMetadataType>(metadataNum);
+		}
+	}
 
     return true;
 }
