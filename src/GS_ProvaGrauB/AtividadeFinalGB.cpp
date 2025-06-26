@@ -100,7 +100,7 @@ const GLchar *vertexShaderSource = R"(
  uniform mat4 projection;
  void main()
  {
-	tex_coord = vec2(texc.s, 1.0 - texc.t);
+	tex_coord = texc;
 	gl_Position = projection * model * vec4(position, 1.0);
  }
  )";
@@ -540,25 +540,25 @@ void desenharMapa(GLuint shaderID, const TileMap& tilemap) {
 
 //renderiza o sprite do personagem Mochi no tilemap
 void desenharMochi(GLuint shaderID, const TileMap& tilemap) {
-	float tileW = tilemap.tileset[0].dimensions.x;
-	float tileH = tilemap.tileset[0].dimensions.y;
-	
-	float centerMapX = (tilemap.width - tilemap.height) * (tileW / 2.0f);
-	float centerMapY = (tilemap.width + tilemap.height) * (tileH / 2.0f);
-	
-	float x0 = (WINDOW_WIDTH  / 2.0f) - (centerMapX / 2.0f);
-	float y0 = (WINDOW_HEIGHT / 2.0f) - (centerMapY / 2.0f);
+    float tileW = tilemap.tileset[0].dimensions.x;
+    float tileH = tilemap.tileset[0].dimensions.y;
 
-    float px = x0 + (player_j - player_i) * (tileW / 2.0f);
-    float py = y0 + (player_j + player_i) * (tileH / 2.0f);
+    float map_display_offset_x = (WINDOW_WIDTH / 2.0f) - ((tilemap.width - tilemap.height) * (tileW / 2.0f) / 2.0f);
+    float map_display_offset_y = (WINDOW_HEIGHT / 2.0f) - ((tilemap.width + tilemap.height) * (tileH / 2.0f) / 2.0f);
+
+    float px = map_display_offset_x + (player_j - player_i) * (tileW / 2.0f);
+    float py = map_display_offset_y + (player_j + player_i) * (tileH / 2.0f);
 
     mat4 model = mat4(1);
-    model = translate(model, vec3(px, py, 0.2f));
+
+    float mochi_x_position = px + (tileW / 2.0f);
+    float mochi_y_position = py + tileH - (mochi.dimensions.y / 2.0f) + 40.0f;
+
+    model = translate(model, vec3(mochi_x_position, mochi_y_position, 0.2f));
     model = scale(model, mochi.dimensions);
 
     glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
-
-    //cálculo do offset da animação no sprite
+	//cálculo do offset da animação no sprite
     vec2 offsetTex;
     offsetTex.s = mochi.iFrame * mochi.ds;
     offsetTex.t = (mochi.nAnimations - 1 - mochi.iAnimation) * mochi.dt;
