@@ -66,6 +66,7 @@ struct TileMap {
 
 const GLuint WINDOW_WIDTH = 1850, WINDOW_HEIGHT = 900;
 
+const int LAVA_TILE = 3;
 const int WATER_TILE = 5;
 const int PLAYER_TILE = 6;
 
@@ -295,6 +296,15 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 		// verifica se o tile é caminhável (não é água)
 		if (tilemap.map[new_i][new_j] == WATER_TILE) {
 			return;
+		}
+
+		// verifica se o tile é lava
+		// se for lava, o jogador volta para a posição inicial
+		if (tilemap.map[new_i][new_j] == LAVA_TILE) {
+			new_i = 0;
+			new_j = 0;
+
+			// TODO: mochi perde uma vida?
 		}
 
 		player_i = new_i;
