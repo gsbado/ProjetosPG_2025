@@ -6,7 +6,7 @@ Este diretório contém o projeto **Mochi's Journey**, desenvolvido como Ativida
 
 - Gabriela Bado e Sadi Júnior
 
-______________________________________________
+
 
 ## 📁 Estrutura
 
@@ -16,7 +16,6 @@ ______________________________________________
 - `assets/sprites/coin/coin.png` - Sprite da moeda dourada.
 - `assets/tilesets/tilesetIso.png` - Tileset isométrico utilizado no mapa.
 
-______________________________________________
 
 
 ## ⚙️ Como Executar
@@ -26,13 +25,13 @@ Para compilar e rodar este projeto, certifique-se de ter um compilador C++ e as 
 1. Abra o terminal e entre na pasta `build` do projeto: `cd build`
 2. Gere os arquivos de build com o CMake (ou configure seu projeto na IDE).
 3. Compile o projeto (pode utilizar `cmake --build .` no terminal).
-4. Execute o programa gerado (`./AnimaSprites`).
+4. Execute o programa gerado (`./AtividadeFinalGB`).
 
 Certifique-se de que as DLLs das bibliotecas estejam acessíveis no PATH do sistema, se necessário.
 
 ______________________________________________
 
-# AtividadeFinalGB: Mochi's Journey
+
 
 ## 💡 Sobre o Programa
 
@@ -42,7 +41,7 @@ ______________________________________________
 - O sistema de colisão, coleta de moedas e vidas é feito por meio de metadados dos tiles.
 - O código é modular e pode ser expandido para incluir novos desafios, inimigos ou power-ups.
 
----
+
 
 ## 📖 História
 
@@ -58,7 +57,7 @@ Determinado a provar seu valor e proteger sua terra, Mochi parte em uma jornada 
 
 Cada moeda representa uma virtude: coragem, sabedoria, equilíbrio, paciência e amor. Não há finais gloriosos, portais nem créditos rolando, o objetivo de Mochi é simples: explorar, sobreviver e encontrar todas as moedas. Só assim ele sentirá que cumpriu seu papel em Pixelândia.
 
----
+
 
 ## 🚀 Regras do Jogo
 
@@ -67,6 +66,8 @@ Cada moeda representa uma virtude: coragem, sabedoria, equilíbrio, paciência e
 - **Vidas:** Mochi começa com 3 vidas. Se perder todas, é **Game Over**.
 - **Lava:** Se Mochi pisar em um tile de lava, perde uma vida e retorna ao início do jogo.
 - **Obstáculos:** Tiles de água não podem ser atravessados.
+
+
 
 ## 🎮 Controles
 
@@ -84,6 +85,7 @@ Cada moeda representa uma virtude: coragem, sabedoria, equilíbrio, paciência e
 ______________________________________________
 
 
+
 ## 📌 Observações Finais
 
 - O código pode ser facilmente adaptado para diferentes resoluções alterando as constantes de largura/altura e a matriz de projeção.
@@ -91,4 +93,4 @@ ______________________________________________
 - Para alterar sprites ou tilesets, substitua as imagens nas pastas de assets.
 
 
-Bom jogo! 🍡✨
+Bom jogo! 👾
