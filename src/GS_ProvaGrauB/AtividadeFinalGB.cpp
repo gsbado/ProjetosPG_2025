@@ -64,21 +64,22 @@ struct Sprite
 	int nAnimations, nFrames;
 };
 
-struct Mochi {
+struct Mochi
+{
 	Sprite sprite;
 	bool died;
 	double diedAt;
 	int lives;
 	int coins;
 };
-	
+
 struct Tile
 {
 	GLuint VAO;
-	GLuint texID; //de qual tileset
-	int iTile; //indice dele no tileset
+	GLuint texID; // de qual tileset
+	int iTile;	  // indice dele no tileset
 	vec3 position;
-	vec3 dimensions; //tamanho do losango 2:1
+	vec3 dimensions; // tamanho do losango 2:1
 	float ds, dt;
 };
 
@@ -96,15 +97,12 @@ struct TileMap
 const GLuint WINDOW_WIDTH = 1850, WINDOW_HEIGHT = 900;
 const unsigned int MOCHI_LIVES = 3;
 const unsigned int TOTAL_COINS = 5;
-
-// posições iniciais do sprite no mapa
 int player_i = 0;
 int player_j = 0;
-
 TileMap tilemap;
 Mochi mochi;
 Sprite coinSprite;
-
+Sprite gameOverSprite;
 bool gameOver;
 bool gameWon;
 double lastMoveTime = 0.0;
@@ -125,6 +123,7 @@ void desenharMochi(GLuint shaderID, const TileMap &tilemap);
 bool carregarMapa(const string &mapPath, string &tileImagePath, int &nTiles, int &tileH, int &tileW, TileMap &tilemap);
 void inicializarTilemap(const string &tileImagePath, int nTiles, int tileH, int tileW, TileMap &tilemap);
 void moverJogador(int new_i, int new_j, int novaAnimacao);
+void desenharGameOver(GLFWwindow *window, GLuint shaderID, const Sprite &gameOverSprite, double curr_s, bool &blinking, double &blinkStart, int &blinkCount);
 
 // ---- SHADERS ----
 
@@ -204,6 +203,7 @@ int main()
 
 	GLuint shaderID = setupShader();
 
+	// ---- carregar texturas e inicializar sprites ----
 	int imgWidth, imgHeight;
 	GLuint textureID = loadTexture("../assets/sprites/Mochi/Walk/Slime1_Walk_full.png", imgWidth, imgHeight);
 
@@ -218,7 +218,6 @@ int main()
 
 	mochi.lives = MOCHI_LIVES;
 
-	// le o arquivo de mapa e inicializa o tilemap
 	string tileImagePath;
 	int nTiles, tileH, tileW;
 	if (!carregarMapa("../src/GS_ProvaGrauB/map.txt", tileImagePath, nTiles, tileH, tileW, tilemap))
@@ -229,11 +228,17 @@ int main()
 
 	int coinWidth, coinHeight;
 	GLuint coinTextureID = loadTexture("../assets/sprites/coin/coin.png", coinWidth, coinHeight);
-	coinSprite.textureID  = coinTextureID;
-	coinSprite.VAO        = setupSprite(1, 1, coinSprite.ds, coinSprite.dt);
+	coinSprite.textureID = coinTextureID;
+	coinSprite.VAO = setupSprite(1, 1, coinSprite.ds, coinSprite.dt);
 	coinSprite.dimensions = vec3((float)coinWidth, (float)coinHeight, 1.0f);
 
 	mochi.coins = 0;
+
+	int goWidth, goHeight;
+	GLuint goTexID = loadTexture("../assets/sprites/game-over.png", goWidth, goHeight);
+	gameOverSprite.textureID = goTexID;
+	gameOverSprite.VAO = setupSprite(1, 1, gameOverSprite.ds, gameOverSprite.dt);
+	gameOverSprite.dimensions = vec3((float)goWidth, (float)goHeight, 1.0f);
 
 	glUseProgram(shaderID);
 
@@ -263,8 +268,14 @@ int main()
 	std::cout << "\n==============================\n";
 	std::cout << " Iniciando Mochi's Journey!\n";
 	std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
-	std::cout << " Encontre as " << TOTAL_COINS << " moedas douradas para vencer!" << "\n";
-	std::cout << "==============================\n" << std::endl;
+	std::cout << " Encontre as " << TOTAL_COINS << " moedas douradas para restaurar o equilíbrio entre os elementos e VENCER O JOGO!" << "\n";
+	std::cout << "==============================\n"
+			  << std::endl;
+	bool gameOverMsgPrinted = false;
+	bool gameOverBlinking = false;
+	double gameOverBlinkStart = 0.0;
+	int gameOverBlinkCount = 0;
+	const int GAME_OVER_BLINKS = 3;
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -278,7 +289,7 @@ int main()
 			double fps = 1.0 / elapsed_s;
 
 			char tmp[256];
-			sprintf(tmp, "Tilemap Isométrico -- Gabriela e Sadi\tFPS %.2lf", fps);
+			sprintf(tmp, "Mochi's Journey -- Gabriela e Sadi\tFPS %.2lf", fps);
 			glfwSetWindowTitle(window, tmp);
 
 			title_countdown_s = 0.1;
@@ -292,43 +303,69 @@ int main()
 		glLineWidth(10);
 		glPointSize(20);
 
-		// se o mochi morreu e passou mais de 2 segundos
-		if (mochi.died && curr_s - mochi.diedAt > 2.0) {
+		if (mochi.died && curr_s - mochi.diedAt > 1.0)
+		{
 			gameOver = mochi.lives <= 0;
 
-			if (!gameOver) {
+			if (!gameOver)
+			{
 				player_i = 0;
 				player_j = 0;
 				mochi.died = false;
+				mochi.sprite.iAnimation = andandoFrente;
+				mochi.sprite.iFrame = 0;
+				mochiIsIdle = true;
 
 				std::cout << "\n==============================\n";
-				std::cout << " Você morreu!\n";
+				std::cout << " Mochi morreu!\n";
 				std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
-				std::cout << " Reiniciando a posição\n";
-				std::cout << "==============================\n" << std::endl;
+				std::cout << " Reiniciando a vida de Mochi\n";
+				std::cout << "==============================\n"
+						  << std::endl;
 			}
-			else {
-				std::cout << "\n==============================\n";
-				std::cout << " GAME OVER!\n";
-				std::cout << " Mochi morreu e não tem mais vidas!\n";
-				std::cout << " Pressione R para reiniciar\n";
-				std::cout << "==============================\n" << std::endl;
+			else
+			{
+				if (!gameOverMsgPrinted)
+				{
+					std::cout << "\n==============================\n";
+					std::cout << " GAME OVER!\n";
+					std::cout << " Mochi morreu e acabaram as suas vidas!\n";
+					std::cout << " Pressione R para reiniciar\n";
+					std::cout << "==============================\n"
+							  << std::endl;
+					gameOverMsgPrinted = true;
+				}
+				if (!gameOverBlinking)
+				{
+					gameOverBlinking = true;
+					gameOverBlinkStart = curr_s;
+					gameOverBlinkCount = 0;
+				}
 			}
 		}
 
 		gameWon = mochi.coins >= TOTAL_COINS;
-		if (gameWon) {
+		if (gameWon)
+		{
 			std::cout << "\n==============================\n";
-			std::cout << " PARABÉNS! Mochi encontrou todas as moedas!\n";
+			std::cout << " CONGRATULATIONS! Mochi encontrou todas as moedas e restaurou o equilíbrio entre os elementos!\n";
 			std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
 			std::cout << " Moedas do Mochi: " << mochi.coins << "\n";
 			std::cout << " Pressione R para reiniciar\n";
-			std::cout << "==============================\n" << std::endl;
+			std::cout << "==============================\n"
+					  << std::endl;
 		}
 
-		if (!gameOver) {
+		if (!gameOver)
+		{
 			desenharMapa(shaderID, tilemap);
 			desenharMochi(shaderID, tilemap);
+			gameOverMsgPrinted = false;
+			gameOverBlinking = false;
+		}
+		else
+		{
+			desenharGameOver(window, shaderID, gameOverSprite, curr_s, gameOverBlinking, gameOverBlinkStart, gameOverBlinkCount);
 		}
 
 		static double lastFrameTime = glfwGetTime();
@@ -359,7 +396,6 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
-	// reinicia o jogo se pressionar R
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 	{
 		gameOver = false;
@@ -373,43 +409,49 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 		player_i = 0;
 		player_j = 0;
 
+		mochi.sprite.iAnimation = andandoFrente;
+		mochi.sprite.iFrame = 0;
+		mochiIsIdle = true;
+
 		std::cout << "\n==============================\n";
 		std::cout << " Reiniciando Mochi's Journey!\n";
 		std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
 		std::cout << " Moedas do Mochi: " << mochi.coins << "\n";
-		std::cout << "==============================\n" << std::endl;
+		std::cout << "==============================\n"
+				  << std::endl;
 	}
 
-	if (gameOver || gameWon) {
+	if (gameOver || gameWon)
+	{
+		return;
+	}
+	if (mochi.died)
+	{
 		return;
 	}
 
-	// se o mochi morreu, não pode se mover
-	if (mochi.died) {
-		return;
-	}
-
-    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        int new_i = player_i;
-        int new_j = player_j;
+	if (action == GLFW_PRESS || action == GLFW_REPEAT)
+	{
+		int new_i = player_i;
+		int new_j = player_j;
 
 		if (key == GLFW_KEY_UP || key == GLFW_KEY_W) // norte
 			moverJogador(player_i - 1, player_j, andandoCostas);
-		else if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A) //oeste
+		else if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A) // oeste
 			moverJogador(player_i, player_j - 1, andandoFrente);
-		else if (key == GLFW_KEY_DOWN || key == GLFW_KEY_S) //sul
+		else if (key == GLFW_KEY_DOWN || key == GLFW_KEY_S) // sul
 			moverJogador(player_i + 1, player_j, andandoFrente);
-		else if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D) //leste
+		else if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D) // leste
 			moverJogador(player_i, player_j + 1, andandoFrente);
-		else if (key == GLFW_KEY_C) //sudeste
+		else if (key == GLFW_KEY_C) // sudeste
 			moverJogador(player_i + 1, player_j + 1, andandoFrente);
-		else if (key == GLFW_KEY_Z) //sudoeste
+		else if (key == GLFW_KEY_Z) // sudoeste
 			moverJogador(player_i + 1, player_j - 1, andandoFrente);
-		else if (key == GLFW_KEY_Q) //noroeste
+		else if (key == GLFW_KEY_Q) // noroeste
 			moverJogador(player_i - 1, player_j - 1, andandoCostas);
-		else if (key == GLFW_KEY_E) //nordeste
+		else if (key == GLFW_KEY_E) // nordeste
 			moverJogador(player_i - 1, player_j + 1, andandoCostas);
-    }
+	}
 }
 
 // ---- IMPLEMENTAÇÃO DAS FUNÇÕES ----
@@ -576,7 +618,7 @@ int loadTexture(string filePath, int &width, int &height)
 	return texID;
 }
 
-//renderiza o tilemap isométrico, desenhando cada tile na sua posição.
+// renderiza o tilemap isométrico, desenhando cada tile na sua posição.
 void desenharMapa(GLuint shaderID, const TileMap &tilemap)
 {
 	float tileW = tilemap.tileset[0].dimensions.x;
@@ -588,7 +630,6 @@ void desenharMapa(GLuint shaderID, const TileMap &tilemap)
 	float x0 = (WINDOW_WIDTH / 2.0f) - (centerMapX / 2.0f);
 	float y0 = (WINDOW_HEIGHT / 2.0f) - (centerMapY / 2.0f);
 
-	//diamond isometric tilemap
 	for (int i = 0; i < tilemap.height; i++)
 	{
 		for (int j = 0; j < tilemap.width; j++)
@@ -612,31 +653,28 @@ void desenharMapa(GLuint shaderID, const TileMap &tilemap)
 			glBindTexture(GL_TEXTURE_2D, curr_tile.texID);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-			if (tilemap.mapMetadata[i][j] == TileMetadataType::Coin) {
+			if (tilemap.mapMetadata[i][j] == TileMetadataType::Coin)
+			{
 				mat4 model = mat4(1.0f);
-				
+
 				float coinX = x + (coinSprite.dimensions.x * 1.2f);
 				float coinY = y + (coinSprite.dimensions.y * 0.5f);
 				model = translate(model, vec3(coinX, coinY, 0.1f));
 				model = scale(model, coinSprite.dimensions);
-			
+
 				glUniformMatrix4fv(
-				  glGetUniformLocation(shaderID, "model"), 1, GL_FALSE,
-				  value_ptr(model)
-				);
+					glGetUniformLocation(shaderID, "model"), 1, GL_FALSE,
+					value_ptr(model));
 				glUniform2f(
-				  glGetUniformLocation(shaderID, "offsetTex"),
-				  0.0f, 0.0f
-				);
-			
+					glGetUniformLocation(shaderID, "offsetTex"),
+					0.0f, 0.0f);
+
 				glBindVertexArray(coinSprite.VAO);
 				glBindTexture(GL_TEXTURE_2D, coinSprite.textureID);
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 			}
 		}
 	}
-
-	//marcando a posição do jogador (diamond)
 	const Tile &marker = tilemap.tileset[TileType::Player];
 
 	float px = x0 + (player_j - player_i) * (tileW / 2.0f);
@@ -657,7 +695,7 @@ void desenharMapa(GLuint shaderID, const TileMap &tilemap)
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
-//renderiza o sprite do personagem Mochi no tilemap
+// renderiza o sprite do personagem Mochi no tilemap
 void desenharMochi(GLuint shaderID, const TileMap &tilemap)
 {
 	float tileW = tilemap.tileset[0].dimensions.x;
@@ -678,7 +716,7 @@ void desenharMochi(GLuint shaderID, const TileMap &tilemap)
 	model = scale(model, mochi.sprite.dimensions);
 
 	glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
-	//cálculo do offset da animação no sprite
+
 	vec2 offsetTex;
 	offsetTex.s = mochi.sprite.iFrame * mochi.sprite.ds;
 	offsetTex.t = mochi.sprite.iAnimation * mochi.sprite.dt;
@@ -750,39 +788,84 @@ void inicializarTilemap(const string &tileImagePath, int nTiles, int tileH, int 
 	}
 }
 
-void moverJogador(int novo_i, int novo_j, int novaAnim) {
+void moverJogador(int novo_i, int novo_j, int novaAnim)
+{
 	if (novo_i < 0 || novo_i >= tilemap.height || novo_j < 0 || novo_j >= tilemap.width)
 		return;
 
-	switch (tilemap.mapMetadata[novo_i][novo_j]) {
-		case TileMetadataType::NonWalkable:
-			return;
-		case TileMetadataType::Lethal:
-			mochi.died = true;
-			mochi.diedAt = glfwGetTime();
-			mochi.lives--;
-			break;
-		case TileMetadataType::Coin:
-			mochi.coins++;
+	switch (tilemap.mapMetadata[novo_i][novo_j])
+	{
+	case TileMetadataType::NonWalkable:
+		return;
+	case TileMetadataType::Lethal:
+		mochi.died = true;
+		mochi.diedAt = glfwGetTime();
+		mochi.lives--;
+		break;
+	case TileMetadataType::Coin:
+		mochi.coins++;
 
-			 // remove a moeda do mapa
-			tilemap.mapMetadata[novo_i][novo_j] = TileMetadataType::Walkable;
-			
-			std::cout << "\n==============================\n";
-			std::cout << " Você coletou uma moeda!" << "\n";
-			std::cout << " Total de moedas: " << mochi.coins << "\n";
-			std::cout << "==============================\n" << std::endl;
-			break;
-		default:
-			break; // outros tipos de tile são caminháveis
+		tilemap.mapMetadata[novo_i][novo_j] = TileMetadataType::Walkable;
+
+		std::cout << "\n==============================\n";
+		std::cout << " Você coletou uma moeda!" << "\n";
+		std::cout << " Total de moedas: " << mochi.coins << "\n";
+		std::cout << "==============================\n"
+				  << std::endl;
+		break;
+	default:
+		break;
 	}
 
-	if (player_i != novo_i || player_j != novo_j) {
+	if (player_i != novo_i || player_j != novo_j)
+	{
 		player_i = novo_i;
 		player_j = novo_j;
 		mochi.sprite.iAnimation = novaAnim;
 		mochi.sprite.iFrame = 0;
 		mochiIsIdle = false;
 		lastMoveTime = glfwGetTime();
+	}
+}
+
+void desenharGameOver(GLFWwindow *window, GLuint shaderID, const Sprite &gameOverSprite, double curr_s, bool &blinking, double &blinkStart, int &blinkCount)
+{
+	const int GAME_OVER_BLINKS = 5;
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	int winWidth, winHeight;
+	glfwGetFramebufferSize(window, &winWidth, &winHeight);
+	float go_x = winWidth / 2.0f;
+	float go_y = winHeight / 2.0f - (0.1f * winHeight);
+
+	bool drawGameOver = true;
+	if (blinking && blinkCount < GAME_OVER_BLINKS * 2)
+	{
+		double blinkElapsed = curr_s - blinkStart;
+		int blinkPhase = (int)(blinkElapsed / 0.2);
+		if (blinkPhase > blinkCount)
+		{
+			blinkCount = blinkPhase;
+		}
+		drawGameOver = (blinkPhase % 2 == 0);
+		if (blinkCount >= GAME_OVER_BLINKS * 2)
+		{
+			blinking = false;
+		}
+	}
+
+	if (drawGameOver)
+	{
+		mat4 model = mat4(1.0f);
+		model = translate(model, vec3(go_x, go_y, 0.5f));
+		model = scale(model, gameOverSprite.dimensions);
+
+		glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+		glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), 0.0f, 0.0f);
+
+		glBindVertexArray(gameOverSprite.VAO);
+		glBindTexture(GL_TEXTURE_2D, gameOverSprite.textureID);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
 }
