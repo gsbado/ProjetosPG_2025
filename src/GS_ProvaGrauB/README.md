@@ -15,6 +15,8 @@ Este diretório contém o projeto **Mochi's Journey**, desenvolvido como Ativida
 - `assets/sprites/Mochi/Walk/Slime1_Walk_full.png` - Spritesheet de animação do Mochi.
 - `assets/sprites/coin/coin.png` - Sprite da moeda dourada.
 - `assets/tilesets/tilesetIso.png` - Tileset isométrico utilizado no mapa.
+- `assets/sprites/Tree/Mega_tree1.png` - Sprite das árvores decorativas utilizadas no mapa.
+- `assets/game-over.png` e `assets/winner.png` - Mensagens apresentadas na tela de Game Over e de Vitória.
 
 
 
@@ -57,16 +59,19 @@ Determinado a provar seu valor e proteger sua terra, Mochi parte em uma jornada 
 
 Cada moeda representa uma virtude: coragem, sabedoria, equilíbrio, paciência e amor. Não há finais gloriosos, portais nem créditos rolando, o objetivo de Mochi é simples: explorar, sobreviver e encontrar todas as moedas. Só assim ele sentirá que cumpriu seu papel em Pixelândia.
 
+Agora, Mochi conta com a sua ajuda. Guie-o com atenção pelos caminhos pixelados, reúna as cinco moedas da virtude e descubra se é possível salvar Pixelândia antes que ela se desfaça em blocos de esquecimento.
+
+O destino de Mochi e Pixelândia está em suas mãos.
 
 
 ## 🚀 Regras do Jogo
 
-- **Objetivo:** Colete as 5 moedas douradas do mapa para vencer.
-- **Moedas:** Ao passar sobre uma moeda, ela desaparece do tile. Quando todas as moedas forem coletadas, o jogo termina com vitória.
-- **Vidas:** Mochi começa com 3 vidas. Se perder todas, é **Game Over**.
-- **Lava:** Se Mochi pisar em um tile de lava, perde uma vida e retorna ao início do jogo.
+- **Objetivo:** Colete as 5 moedas douradas do mapa para vencer. A mensagem de vitória será exibida automaticamente.
+- **Moedas:** Ao passar sobre uma moeda, ela desaparece do tile. Quando todas as moedas forem coletadas, o jogo termina com vitória. Moedas já coletadas não desaparecem, mesmo após Mochi perder uma vida.
+- **Vidas:** Mochi começa com 3 vidas. Ao perder uma vida, Mochi retorna à posição inicial do mapa. Se perder todas, aparece uma mensagem de **Game Over**.
+- **Lava:** Se Mochi pisar em um tile de lava, perde uma vida.
 - **Obstáculos:** Tiles de água não podem ser atravessados.
-
+- **Limites do Mapa:** Mochi não pode sair dos limites do mapa de Pixelândia.
 
 
 ## 🎮 Controles
@@ -91,6 +96,11 @@ ______________________________________________
 - O código pode ser facilmente adaptado para diferentes resoluções alterando as constantes de largura/altura e a matriz de projeção.
 - Para adicionar novos mapas, basta criar um novo arquivo de mapa seguindo o formato esperado.
 - Para alterar sprites ou tilesets, substitua as imagens nas pastas de assets.
+- O jogo foi desenvolvido com uma estrutura modular, o que permite sua expansão com facilidade:
+  - É possível adicionar novos tipos de inimigos, obstáculos e itens colecionávei.
+  - Novas animações e eventos podem ser incluídos com pequenas alterações no sistema de sprites. Por exemplo, animação para Mochi morrendo ou animação para quando permanece muito tempo parado.
+  - Pode-se implementar fases com objetivos diferentes, sistemas de pontuação, ou até mesmo menus e transições entre fases.
+  - Também é possível adicionar som ambiente, novos personagens, efeitos sonoros... 
 
 
-Bom jogo! 👾
+### Bom jogo! 👾
