@@ -124,6 +124,11 @@ bool carregarMapa(const string &mapPath, string &tileImagePath, int &nTiles, int
 void inicializarTilemap(const string &tileImagePath, int nTiles, int tileH, int tileW, TileMap &tilemap);
 void moverJogador(int new_i, int new_j, int novaAnimacao);
 void desenharGameOver(GLFWwindow *window, GLuint shaderID, const Sprite &gameOverSprite, double curr_s, bool &blinking, double &blinkStart, int &blinkCount);
+void inicializarSprites();
+bool inicializarTilemapEMapa(TileMap &tilemap, vector<vector<TileMetadataType>> &originalMapMetadata);
+void atualizarTituloJanela(GLFWwindow *window, double elapsed_s);
+void reiniciarJogo();
+void processarMorteMochi(double curr_s, bool &gameOverMsgPrinted, bool &gameOverBlinking, double &gameOverBlinkStart, int &gameOverBlinkCount);
 
 // ---- SHADERS ----
 
@@ -158,22 +163,7 @@ const GLchar *fragmentShaderSource = R"(
 int main()
 {
 	glfwInit();
-
-	// Muita atenção aqui: alguns ambientes não aceitam essas configurações
-	// Você deve adaptar para a versão do OpenGL suportada por sua placa
-	// Sugestão: comente essas linhas de código para desobrir a versão e
-	// depois atualize (por exemplo: 4.5 com 4 e 5)
-	// glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	// glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-	// glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	// glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
 	glfwWindowHint(GLFW_SAMPLES, 8);
-
-	// Essencial para computadores da Apple
-	// #ifdef __APPLE__
-	//	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	// #endif
 
 	GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Mochi's Journey --Gabriela e Sadi", nullptr, nullptr);
 	if (!window)
@@ -183,7 +173,6 @@ int main()
 		return -1;
 	}
 	glfwMakeContextCurrent(window);
-
 	glfwSetKeyCallback(window, key_callback);
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -192,63 +181,22 @@ int main()
 		return -1;
 	}
 
-	const GLubyte *renderer = glGetString(GL_RENDERER); /* get renderer string */
-	const GLubyte *version = glGetString(GL_VERSION);	/* version as a string */
-	cout << "Renderer: " << renderer << endl;
-	cout << "OpenGL version supported " << version << endl;
-
 	int width, height;
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 
 	GLuint shaderID = setupShader();
 
-	// ---- carregar texturas e inicializar sprites ----
-	int imgWidth, imgHeight;
-	GLuint textureID = loadTexture("../assets/sprites/Mochi/Walk/Slime1_Walk_full.png", imgWidth, imgHeight);
+	inicializarSprites();
 
-	mochi.sprite.nAnimations = 4;
-	mochi.sprite.nFrames = 8;
-	mochi.sprite.VAO = setupSprite(mochi.sprite.nAnimations, mochi.sprite.nFrames, mochi.sprite.ds, mochi.sprite.dt);
-	mochi.sprite.position = vec3(0.0, 0.0, 0.0);
-	mochi.sprite.dimensions = vec3((imgWidth / mochi.sprite.nFrames) * 3.0f, (imgHeight / mochi.sprite.nAnimations) * 3.0f, 1.0f);
-	mochi.sprite.textureID = textureID;
-	mochi.sprite.iAnimation = 3;
-	mochi.sprite.iFrame = 0;
-
-	mochi.lives = MOCHI_LIVES;
-
-	string tileImagePath;
-	int nTiles, tileH, tileW;
-	if (!carregarMapa("../src/GS_ProvaGrauB/map.txt", tileImagePath, nTiles, tileH, tileW, tilemap))
-	{
+	if (!inicializarTilemapEMapa(tilemap, originalMapMetadata))
 		return -1;
-	}
-	inicializarTilemap(tileImagePath, nTiles, tileH, tileW, tilemap);
-
-	int coinWidth, coinHeight;
-	GLuint coinTextureID = loadTexture("../assets/sprites/coin/coin.png", coinWidth, coinHeight);
-	coinSprite.textureID = coinTextureID;
-	coinSprite.VAO = setupSprite(1, 1, coinSprite.ds, coinSprite.dt);
-	coinSprite.dimensions = vec3((float)coinWidth, (float)coinHeight, 1.0f);
-
-	mochi.coins = 0;
-
-	int goWidth, goHeight;
-	GLuint goTexID = loadTexture("../assets/sprites/game-over.png", goWidth, goHeight);
-	gameOverSprite.textureID = goTexID;
-	gameOverSprite.VAO = setupSprite(1, 1, gameOverSprite.ds, gameOverSprite.dt);
-	gameOverSprite.dimensions = vec3((float)goWidth, (float)goHeight, 1.0f);
 
 	glUseProgram(shaderID);
 
 	double prev_s = glfwGetTime();
 	double title_countdown_s = 0.1;
-
-	float colorValue = 0.0;
-
 	glActiveTexture(GL_TEXTURE0);
-
 	glUniform1i(glGetUniformLocation(shaderID, "tex_buff"), 0);
 
 	mat4 projection = ortho(0.0, (double)WINDOW_WIDTH, (double)WINDOW_HEIGHT, 0.0, -1.0, 1.0);
@@ -256,26 +204,31 @@ int main()
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_ALWAYS);
-
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	double lastTime = 0.0;
-	double deltaT = 0.0;
-	double currTime = glfwGetTime();
 	double FPS = 12.0;
-
 	std::cout << "\n==============================\n";
 	std::cout << " Iniciando Mochi's Journey!\n";
 	std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
 	std::cout << " Encontre as " << TOTAL_COINS << " moedas douradas para restaurar o equilíbrio entre os elementos e VENCER O JOGO!" << "\n";
-	std::cout << "==============================\n"
-			  << std::endl;
+	std::cout << "==============================\n" << std::endl;
+
+	gameOver = false;
+	gameWon = false;
+	mochi.lives = MOCHI_LIVES;
+	mochi.died = false;
+	mochi.coins = 0;
+	player_i = 0;
+	player_j = 0;
+	mochi.sprite.iAnimation = andandoFrente;
+	mochi.sprite.iFrame = 0;
+	mochiIsIdle = true;
+
 	bool gameOverMsgPrinted = false;
 	bool gameOverBlinking = false;
 	double gameOverBlinkStart = 0.0;
 	int gameOverBlinkCount = 0;
-	const int GAME_OVER_BLINKS = 3;
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -286,12 +239,7 @@ int main()
 		title_countdown_s -= elapsed_s;
 		if (title_countdown_s <= 0.0 && elapsed_s > 0.0)
 		{
-			double fps = 1.0 / elapsed_s;
-
-			char tmp[256];
-			sprintf(tmp, "Mochi's Journey -- Gabriela e Sadi\tFPS %.2lf", fps);
-			glfwSetWindowTitle(window, tmp);
-
+			atualizarTituloJanela(window, elapsed_s);
 			title_countdown_s = 0.1;
 		}
 
@@ -305,38 +253,19 @@ int main()
 
 		if (mochi.died && curr_s - mochi.diedAt > 1.0)
 		{
-			gameOver = mochi.lives <= 0;
-
-			if (!gameOver)
-			{
-				player_i = 0;
-				player_j = 0;
-				mochi.died = false;
-				mochi.sprite.iAnimation = andandoFrente;
-				mochi.sprite.iFrame = 0;
-				mochiIsIdle = true;
-
-				std::cout << "\n==============================\n";
-				std::cout << " Mochi morreu!\n";
-				std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
-				std::cout << " Reiniciando a vida de Mochi\n";
-				std::cout << "==============================\n"
-						  << std::endl;
-			}
-			else
-			{
-				if (!gameOverMsgPrinted)
-				{
+			if (mochi.lives > 0) {
+				processarMorteMochi(curr_s, gameOverMsgPrinted, gameOverBlinking, gameOverBlinkStart, gameOverBlinkCount);
+			} else {
+				gameOver = true;
+				if (!gameOverMsgPrinted) {
 					std::cout << "\n==============================\n";
 					std::cout << " GAME OVER!\n";
 					std::cout << " Mochi morreu e acabaram as suas vidas!\n";
 					std::cout << " Pressione R para reiniciar\n";
-					std::cout << "==============================\n"
-							  << std::endl;
+					std::cout << "==============================\n" << std::endl;
 					gameOverMsgPrinted = true;
 				}
-				if (!gameOverBlinking)
-				{
+				if (!gameOverBlinking) {
 					gameOverBlinking = true;
 					gameOverBlinkStart = curr_s;
 					gameOverBlinkCount = 0;
@@ -352,8 +281,7 @@ int main()
 			std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
 			std::cout << " Moedas do Mochi: " << mochi.coins << "\n";
 			std::cout << " Pressione R para reiniciar\n";
-			std::cout << "==============================\n"
-					  << std::endl;
+			std::cout << "==============================\n" << std::endl;
 		}
 
 		if (!gameOver)
@@ -389,13 +317,14 @@ int main()
 	return 0;
 }
 
-// ---- IMPLEMENTAÇÃO DAS FUNÇÕES
+// ---- IMPLEMENTAÇÃO DAS FUNÇÕES ----
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	{
 		glfwSetWindowShouldClose(window, GL_TRUE);
-
+	}
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 	{
 		gameOver = false;
@@ -453,8 +382,6 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 			moverJogador(player_i - 1, player_j + 1, andandoCostas);
 	}
 }
-
-// ---- IMPLEMENTAÇÃO DAS FUNÇÕES ----
 
 int setupShader()
 {
@@ -618,7 +545,6 @@ int loadTexture(string filePath, int &width, int &height)
 	return texID;
 }
 
-// renderiza o tilemap isométrico, desenhando cada tile na sua posição.
 void desenharMapa(GLuint shaderID, const TileMap &tilemap)
 {
 	float tileW = tilemap.tileset[0].dimensions.x;
@@ -695,7 +621,6 @@ void desenharMapa(GLuint shaderID, const TileMap &tilemap)
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
-// renderiza o sprite do personagem Mochi no tilemap
 void desenharMochi(GLuint shaderID, const TileMap &tilemap)
 {
 	float tileW = tilemap.tileset[0].dimensions.x;
@@ -808,7 +733,7 @@ void moverJogador(int novo_i, int novo_j, int novaAnim)
 		tilemap.mapMetadata[novo_i][novo_j] = TileMetadataType::Walkable;
 
 		std::cout << "\n==============================\n";
-		std::cout << " Você coletou uma moeda!" << "\n";
+		std::cout << " Mochi coletou uma moeda!" << "\n";
 		std::cout << " Total de moedas: " << mochi.coins << "\n";
 		std::cout << "==============================\n"
 				  << std::endl;
@@ -867,5 +792,95 @@ void desenharGameOver(GLFWwindow *window, GLuint shaderID, const Sprite &gameOve
 		glBindVertexArray(gameOverSprite.VAO);
 		glBindTexture(GL_TEXTURE_2D, gameOverSprite.textureID);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+}
+
+	void inicializarSprites() {
+	int imgWidth, imgHeight;
+	GLuint mochiTexID = loadTexture("../assets/sprites/Mochi/Walk/Slime1_Walk_full.png", imgWidth, imgHeight);
+	mochi.sprite.nAnimations = 4;
+	mochi.sprite.nFrames = 8;
+	mochi.sprite.VAO = setupSprite(mochi.sprite.nAnimations, mochi.sprite.nFrames, mochi.sprite.ds, mochi.sprite.dt);
+	mochi.sprite.position = vec3(0.0, 0.0, 0.0);
+	mochi.sprite.dimensions = vec3((imgWidth / mochi.sprite.nFrames) * 3.0f, (imgHeight / mochi.sprite.nAnimations) * 3.0f, 1.0f);
+	mochi.sprite.textureID = mochiTexID;
+	mochi.sprite.iAnimation = 3;
+	mochi.sprite.iFrame = 0;
+
+	int coinWidth, coinHeight;
+	GLuint coinTextureID = loadTexture("../assets/sprites/coin/coin.png", coinWidth, coinHeight);
+	coinSprite.textureID = coinTextureID;
+	coinSprite.VAO = setupSprite(1, 1, coinSprite.ds, coinSprite.dt);
+	coinSprite.dimensions = vec3((float)coinWidth, (float)coinHeight, 1.0f);
+
+	int goWidth, goHeight;
+	GLuint goTexID = loadTexture("../assets/sprites/game-over.png", goWidth, goHeight);
+	gameOverSprite.textureID = goTexID;
+	gameOverSprite.VAO = setupSprite(1, 1, gameOverSprite.ds, gameOverSprite.dt);
+	gameOverSprite.dimensions = vec3((float)goWidth, (float)goHeight, 1.0f);
+}
+
+bool inicializarTilemapEMapa(TileMap &tilemap, vector<vector<TileMetadataType>> &originalMapMetadata) {
+	string tileImagePath;
+	int nTiles, tileH, tileW;
+	if (!carregarMapa("../src/GS_ProvaGrauB/map.txt", tileImagePath, nTiles, tileH, tileW, tilemap))
+		return false;
+	inicializarTilemap(tileImagePath, nTiles, tileH, tileW, tilemap);
+	return true;
+}
+
+void atualizarTituloJanela(GLFWwindow *window, double elapsed_s) {
+	double fps = 1.0 / elapsed_s;
+	char tmp[256];
+	sprintf(tmp, "Mochi's Journey -- Gabriela e Sadi\tFPS %.2lf", fps);
+	glfwSetWindowTitle(window, tmp);
+}
+
+void reiniciarJogo() {
+	gameOver = false;
+	mochi.lives = MOCHI_LIVES;
+	mochi.died = false;
+	mochi.coins = 0;
+	tilemap.mapMetadata = originalMapMetadata;
+	player_i = 0;
+	player_j = 0;
+	mochi.sprite.iAnimation = andandoFrente;
+	mochi.sprite.iFrame = 0;
+	mochiIsIdle = true;
+	std::cout << "\n==============================\n";
+	std::cout << " Reiniciando Mochi's Journey!\n";
+	std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
+	std::cout << " Moedas do Mochi: " << mochi.coins << "\n";
+	std::cout << "==============================\n" << std::endl;
+}
+
+void processarMorteMochi(double curr_s, bool &gameOverMsgPrinted, bool &gameOverBlinking, double &gameOverBlinkStart, int &gameOverBlinkCount) {
+	gameOver = mochi.lives <= 0;
+	if (!gameOver) {
+		player_i = 0;
+		player_j = 0;
+		mochi.died = false;
+		mochi.sprite.iAnimation = andandoFrente;
+		mochi.sprite.iFrame = 0;
+		mochiIsIdle = true;
+		std::cout << "\n==============================\n";
+		std::cout << " Mochi morreu!\n";
+		std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
+		std::cout << " Reiniciando a vida de Mochi\n";
+		std::cout << "==============================\n" << std::endl;
+	} else {
+		if (!gameOverMsgPrinted) {
+			std::cout << "\n==============================\n";
+			std::cout << " GAME OVER!\n";
+			std::cout << " Mochi morreu e acabaram as suas vidas!\n";
+			std::cout << " Pressione R para reiniciar\n";
+			std::cout << "==============================\n" << std::endl;
+			gameOverMsgPrinted = true;
+		}
+		if (!gameOverBlinking) {
+			gameOverBlinking = true;
+			gameOverBlinkStart = curr_s;
+			gameOverBlinkCount = 0;
+		}
 	}
 }
