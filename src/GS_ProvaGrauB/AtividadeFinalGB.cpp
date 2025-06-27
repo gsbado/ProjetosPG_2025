@@ -50,6 +50,7 @@ enum TileMetadataType
 	NonWalkable = 1,
 	Lethal = 2,
 	Coin = 3,
+	Decoration = 4
 };
 
 // ---- STRUCTS ----
@@ -104,6 +105,8 @@ Mochi mochi;
 Sprite coinSprite;
 Sprite gameOverSprite;
 Sprite winnerSprite;
+Sprite treeSprite;
+Sprite rockSprite;
 bool gameOver;
 bool gameWon;
 double lastMoveTime = 0.0;
@@ -620,6 +623,22 @@ void desenharMapa(GLuint shaderID, const TileMap &tilemap)
 				glBindTexture(GL_TEXTURE_2D, coinSprite.textureID);
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 			}
+			if (tilemap.mapMetadata[i][j] == TileMetadataType::Decoration)
+			{
+				mat4 model = mat4(1.0f);
+				// Centralizar a árvore no tile igual ao Mochi (centro do tile)
+				float treeX = x + (tilemap.tileset[0].dimensions.x / 2.0f);
+				float treeY = y + tilemap.tileset[0].dimensions.y - (treeSprite.dimensions.y / 2.0f);
+				model = translate(model, vec3(treeX, treeY, 0.15f));
+				model = scale(model, treeSprite.dimensions);
+
+				glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+				glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), 0.0f, 0.0f);
+
+				glBindVertexArray(treeSprite.VAO);
+				glBindTexture(GL_TEXTURE_2D, treeSprite.textureID);
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			}
 		}
 	}
 	const Tile &marker = tilemap.tileset[TileType::Player];
@@ -871,7 +890,7 @@ void desenharWinner(GLFWwindow *window, GLuint shaderID, const Sprite &winnerSpr
 	mochi.sprite.iFrame = 0;
 
 	int coinWidth, coinHeight;
-	GLuint coinTextureID = loadTexture("../assets/sprites/coin/coin.png", coinWidth, coinHeight);
+	GLuint coinTextureID = loadTexture("../assets/sprites/Objects/coin/coin.png", coinWidth, coinHeight);
 	coinSprite.textureID = coinTextureID;
 	coinSprite.VAO = setupSprite(1, 1, coinSprite.ds, coinSprite.dt);
 	coinSprite.dimensions = vec3((float)coinWidth, (float)coinHeight, 1.0f);
@@ -887,6 +906,12 @@ void desenharWinner(GLFWwindow *window, GLuint shaderID, const Sprite &winnerSpr
 	winnerSprite.textureID = winnerTexID;
 	winnerSprite.VAO = setupSprite(1, 1, winnerSprite.ds, winnerSprite.dt);
 	winnerSprite.dimensions = vec3((float)winnerWidth, (float)winnerHeight, 1.0f);
+
+	int decoWidth, decoHeight;
+	GLuint decoTexID = loadTexture("../assets/sprites/Objects/Tree/Mega_tree1.png", decoWidth, decoHeight);
+	treeSprite.textureID = decoTexID;
+	treeSprite.VAO = setupSprite(1, 1, treeSprite.ds, treeSprite.dt);
+	treeSprite.dimensions = vec3((float)decoWidth, (float)decoHeight, 1.0f);
 }
 
 bool inicializarTilemapEMapa(TileMap &tilemap, vector<vector<TileMetadataType>> &originalMapMetadata) {
