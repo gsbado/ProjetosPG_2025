@@ -65,6 +65,7 @@ struct Mochi {
 	Sprite sprite;
 	bool died;
 	double diedAt;
+	int lives;
 };
 	
 struct Tile
@@ -90,6 +91,7 @@ struct TileMap {
 // ---- VARIÁVEIS GLOBAIS ---- 
 
 const GLuint WINDOW_WIDTH = 1850, WINDOW_HEIGHT = 900;
+const unsigned int MOCHI_LIVES = 3;
 
 //posições iniciais do sprite no mapa
 int player_i = 0;
@@ -97,6 +99,8 @@ int player_j = 0;
 
 TileMap tilemap;
 Mochi mochi;
+
+bool gameOver;
 
 // ---- DECLARAÇÃO DE FUNÇÕES ---- 
 
@@ -201,6 +205,8 @@ int main()
     mochi.sprite.iAnimation = 3; //assim, ele começa parado olhando pra frente
     mochi.sprite.iFrame = 0; //primeiro frame da animação
 
+	mochi.lives = MOCHI_LIVES;
+
 	// le o arquivo de mapa e inicializa o tilemap
 	string tileImagePath;
 	int nTiles, tileH, tileW;
@@ -236,31 +242,28 @@ int main()
 	double currTime = glfwGetTime();
 	double FPS = 12.0;
 
+	std::cout << "\n==============================\n";
+	std::cout << " Iniciando Mochi's Journey!\n";
+	std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
+	std::cout << " Encontre a moeda dourada!\n";
+	std::cout << "==============================\n" << std::endl;
+
 	while (!glfwWindowShouldClose(window))
 	{
+		double curr_s = glfwGetTime();
+		double elapsed_s = curr_s - prev_s;
+		prev_s = curr_s;
+
+		title_countdown_s -= elapsed_s;
+		if (title_countdown_s <= 0.0 && elapsed_s > 0.0)
 		{
-			double curr_s = glfwGetTime();
-			double elapsed_s = curr_s - prev_s;
-			prev_s = curr_s;
+			double fps = 1.0 / elapsed_s;
 
-			title_countdown_s -= elapsed_s;
-			if (title_countdown_s <= 0.0 && elapsed_s > 0.0)
-			{
-				double fps = 1.0 / elapsed_s;
+			char tmp[256];
+			sprintf(tmp, "Tilemap Isométrico -- Gabriela e Sadi\tFPS %.2lf", fps);
+			glfwSetWindowTitle(window, tmp);
 
-				char tmp[256];
-				sprintf(tmp, "Tilemap Isométrico -- Gabriela e Sadi\tFPS %.2lf", fps);
-				glfwSetWindowTitle(window, tmp);
-
-				title_countdown_s = 0.1;
-			}
-
-			// se o mochi morreu e passou mais de 2 segundos, reseta a posição do jogador
-			if (mochi.died && curr_s - mochi.diedAt > 2.0) {
-				player_i = 0;
-				player_j = 0;
-				mochi.died = false;
-			}
+			title_countdown_s = 0.1;
 		}
 
 		glfwPollEvents();
@@ -271,8 +274,35 @@ int main()
 		glLineWidth(10);
 		glPointSize(20);
 
-		desenharMapa(shaderID, tilemap);
-		desenharMochi(shaderID, tilemap);
+		// se o mochi morreu e passou mais de 2 segundos
+		if (mochi.died && curr_s - mochi.diedAt > 2.0) {
+			gameOver = mochi.lives <= 0;
+
+			if (!gameOver) {
+				player_i = 0;
+				player_j = 0;
+				mochi.died = false;
+
+				std::cout << "\n==============================\n";
+				std::cout << " Você morreu!\n";
+				std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
+				std::cout << " Reiniciando a posição\n";
+				std::cout << "==============================\n" << std::endl;
+			}
+			else {
+				std::cout << "\n==============================\n";
+				std::cout << " GAME OVER!\n";
+				std::cout << " Mochi morreu e não tem mais vidas!\n";
+				std::cout << " Pressione R para reiniciar\n";
+				std::cout << "==============================\n" << std::endl;
+			}
+		}
+
+		if (!gameOver) {
+			desenharMapa(shaderID, tilemap);
+			desenharMochi(shaderID, tilemap);
+		}
+
 		glfwSwapBuffers(window);
 	}
 		
@@ -288,6 +318,23 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+
+	// reinicia o jogo se pressionar R
+	if (key == GLFW_KEY_R && action == GLFW_PRESS)
+	{
+		gameOver = false;
+
+		mochi.lives = MOCHI_LIVES;
+		mochi.died = false;
+
+		player_i = 0;
+		player_j = 0;
+
+		std::cout << "\n==============================\n";
+		std::cout << " Reiniciando Mochi's Journey!\n";
+		std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
+		std::cout << "==============================\n" << std::endl;
+	}
 
 	// se o mochi morreu, não pode se mover
 	if (mochi.died) {
@@ -336,6 +383,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 		if (tilemap.mapMetadata[new_i][new_j] == TileMetadataType::Lethal) {
 			mochi.died = true;
 			mochi.diedAt = glfwGetTime();
+			mochi.lives--;
 		}
 
 		player_i = new_i;
