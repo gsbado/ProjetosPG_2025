@@ -76,10 +76,10 @@ struct Mochi
 struct Tile
 {
 	GLuint VAO;
-	GLuint texID; // de qual tileset
-	int iTile;	  // indice dele no tileset
+	GLuint texID;
+	int iTile;
 	vec3 position;
-	vec3 dimensions; // tamanho do losango 2:1
+	vec3 dimensions;
 	float ds, dt;
 };
 
@@ -103,6 +103,7 @@ TileMap tilemap;
 Mochi mochi;
 Sprite coinSprite;
 Sprite gameOverSprite;
+Sprite winnerSprite;
 bool gameOver;
 bool gameWon;
 double lastMoveTime = 0.0;
@@ -124,6 +125,7 @@ bool carregarMapa(const string &mapPath, string &tileImagePath, int &nTiles, int
 void inicializarTilemap(const string &tileImagePath, int nTiles, int tileH, int tileW, TileMap &tilemap);
 void moverJogador(int new_i, int new_j, int novaAnimacao);
 void desenharGameOver(GLFWwindow *window, GLuint shaderID, const Sprite &gameOverSprite, double curr_s, bool &blinking, double &blinkStart, int &blinkCount);
+void desenharWinner(GLFWwindow *window, GLuint shaderID, const Sprite &winnerSprite, double curr_s, bool &blinking, double &blinkStart, int &blinkCount);
 void inicializarSprites();
 bool inicializarTilemapEMapa(TileMap &tilemap, vector<vector<TileMetadataType>> &originalMapMetadata);
 void atualizarTituloJanela(GLFWwindow *window, double elapsed_s);
@@ -230,6 +232,11 @@ int main()
 	double gameOverBlinkStart = 0.0;
 	int gameOverBlinkCount = 0;
 
+	bool winnerMsgPrinted = false;
+	bool winnerBlinking = false;
+	double winnerBlinkStart = 0.0;
+	int winnerBlinkCount = 0;
+
 	while (!glfwWindowShouldClose(window))
 	{
 		double curr_s = glfwGetTime();
@@ -276,24 +283,38 @@ int main()
 		gameWon = mochi.coins >= TOTAL_COINS;
 		if (gameWon)
 		{
-			std::cout << "\n==============================\n";
-			std::cout << " CONGRATULATIONS! Mochi encontrou todas as moedas e restaurou o equilíbrio entre os elementos!\n";
-			std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
-			std::cout << " Moedas do Mochi: " << mochi.coins << "\n";
-			std::cout << " Pressione R para reiniciar\n";
-			std::cout << "==============================\n" << std::endl;
+			if (!winnerMsgPrinted) {
+				std::cout << "\n==============================\n";
+				std::cout << " CONGRATULATIONS! Mochi encontrou todas as moedas e restaurou o equilíbrio entre os elementos!\n";
+				std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
+				std::cout << " Moedas do Mochi: " << mochi.coins << "\n";
+				std::cout << " Pressione R para reiniciar\n";
+				std::cout << "==============================\n" << std::endl;
+				winnerMsgPrinted = true;
+			}
+			if (!winnerBlinking) {
+				winnerBlinking = true;
+				winnerBlinkStart = curr_s;
+				winnerBlinkCount = 0;
+			}
 		}
 
-		if (!gameOver)
+		if (!gameOver && !gameWon)
 		{
 			desenharMapa(shaderID, tilemap);
 			desenharMochi(shaderID, tilemap);
 			gameOverMsgPrinted = false;
 			gameOverBlinking = false;
+			winnerMsgPrinted = false;
+			winnerBlinking = false;
 		}
-		else
+		else if (gameOver)
 		{
 			desenharGameOver(window, shaderID, gameOverSprite, curr_s, gameOverBlinking, gameOverBlinkStart, gameOverBlinkCount);
+		}
+		else if (gameWon)
+		{
+			desenharWinner(window, shaderID, winnerSprite, curr_s, winnerBlinking, winnerBlinkStart, winnerBlinkCount);
 		}
 
 		static double lastFrameTime = glfwGetTime();
@@ -795,6 +816,48 @@ void desenharGameOver(GLFWwindow *window, GLuint shaderID, const Sprite &gameOve
 	}
 }
 
+void desenharWinner(GLFWwindow *window, GLuint shaderID, const Sprite &winnerSprite, double curr_s, bool &blinking, double &blinkStart, int &blinkCount)
+{
+	const int WINNER_BLINKS = 5;
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	int winWidth, winHeight;
+	glfwGetFramebufferSize(window, &winWidth, &winHeight);
+	float w_x = winWidth / 2.0f;
+	float w_y = winHeight / 2.0f - (0.1f * winHeight);
+
+	bool drawWinner = true;
+	if (blinking && blinkCount < WINNER_BLINKS * 2)
+	{
+		double blinkElapsed = curr_s - blinkStart;
+		int blinkPhase = (int)(blinkElapsed / 0.2);
+		if (blinkPhase > blinkCount)
+		{
+			blinkCount = blinkPhase;
+		}
+		drawWinner = (blinkPhase % 2 == 0);
+		if (blinkCount >= WINNER_BLINKS * 2)
+		{
+			blinking = false;
+		}
+	}
+
+	if (drawWinner)
+	{
+		mat4 model = mat4(1.0f);
+		model = translate(model, vec3(w_x, w_y, 0.5f));
+		model = scale(model, winnerSprite.dimensions);
+
+		glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+		glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), 0.0f, 0.0f);
+
+		glBindVertexArray(winnerSprite.VAO);
+		glBindTexture(GL_TEXTURE_2D, winnerSprite.textureID);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+}
+
 	void inicializarSprites() {
 	int imgWidth, imgHeight;
 	GLuint mochiTexID = loadTexture("../assets/sprites/Mochi/Walk/Slime1_Walk_full.png", imgWidth, imgHeight);
@@ -818,6 +881,12 @@ void desenharGameOver(GLFWwindow *window, GLuint shaderID, const Sprite &gameOve
 	gameOverSprite.textureID = goTexID;
 	gameOverSprite.VAO = setupSprite(1, 1, gameOverSprite.ds, gameOverSprite.dt);
 	gameOverSprite.dimensions = vec3((float)goWidth, (float)goHeight, 1.0f);
+
+	int winnerWidth, winnerHeight;
+	GLuint winnerTexID = loadTexture("../assets/sprites/winner.png", winnerWidth, winnerHeight);
+	winnerSprite.textureID = winnerTexID;
+	winnerSprite.VAO = setupSprite(1, 1, winnerSprite.ds, winnerSprite.dt);
+	winnerSprite.dimensions = vec3((float)winnerWidth, (float)winnerHeight, 1.0f);
 }
 
 bool inicializarTilemapEMapa(TileMap &tilemap, vector<vector<TileMetadataType>> &originalMapMetadata) {
