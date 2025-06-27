@@ -1,5 +1,5 @@
 /* Jogo: Mochi's Journey
-*      Código adaptado de:
+ *      Código adaptado de:
  *   - https://learnopengl.com/#!Getting-started/Hello-Triangle
  *   - https://antongerdelan.net/opengl/glcontext2.html
  *
@@ -18,13 +18,13 @@
 #include <fstream>
 #include <vector>
 
-// ---- HEADERS GLFW, GLAD, GLM, STB_IMAGE ---- 
+// ---- HEADERS GLFW, GLAD, GLM, STB_IMAGE ----
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include <glm/glm.hpp> 
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -33,7 +33,8 @@ using namespace glm;
 
 // ---- ENUMS ----
 
-enum TileType {
+enum TileType
+{
 	Sand = 0,
 	Grass = 1,
 	Dirt = 2,
@@ -43,13 +44,14 @@ enum TileType {
 	Player = 6,
 };
 
-enum TileMetadataType {
+enum TileMetadataType
+{
 	Walkable = 0,
 	NonWalkable = 1,
 	Lethal = 2,
 };
 
-// ---- STRUCTS ---- 
+// ---- STRUCTS ----
 struct Sprite
 {
 	GLuint VAO;
@@ -76,24 +78,23 @@ struct Tile
 	vec3 position;
 	vec3 dimensions; //tamanho do losango 2:1
 	float ds, dt;
-	//int iAnimation, iFrame;
-	//int nAnimations, nFrames;
 };
 
-struct TileMap {
-    int width;
-    int height;
-    vector<vector<TileType>> map;
+struct TileMap
+{
+	int width;
+	int height;
+	vector<vector<TileType>> map;
 	vector<vector<TileMetadataType>> mapMetadata;
-    vector<Tile> tileset;
+	vector<Tile> tileset;
 };
 
-// ---- VARIÁVEIS GLOBAIS ---- 
+// ---- VARIÁVEIS GLOBAIS ----
 
 const GLuint WINDOW_WIDTH = 1850, WINDOW_HEIGHT = 900;
 const unsigned int MOCHI_LIVES = 3;
 
-//posições iniciais do sprite no mapa
+// posições iniciais do sprite no mapa
 int player_i = 0;
 int player_j = 0;
 
@@ -101,20 +102,25 @@ TileMap tilemap;
 Mochi mochi;
 
 bool gameOver;
+double lastMoveTime = 0.0;
+bool mochiIsIdle = true;
+const int andandoFrente = 0;
+const int andandoCostas = 1;
 
-// ---- DECLARAÇÃO DE FUNÇÕES ---- 
+// ---- DECLARAÇÃO DE FUNÇÕES ----
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode);
 int setupShader();
 int setupSprite(int nAnimations, int nFrames, float &ds, float &dt);
 int setupTile(int nTiles, float &ds, float &dt);
 int loadTexture(string filePath, int &width, int &height);
-void desenharMapa(GLuint shaderID, const TileMap& tilemap);
-void desenharMochi(GLuint shaderID, const TileMap& tilemap);
-bool carregarMapa(const string& mapPath, string& tileImagePath, int& nTiles, int& tileH, int& tileW, TileMap& tilemap);
-void inicializarTilemap(const string& tileImagePath, int nTiles, int tileH, int tileW, TileMap& tilemap);
+void desenharMapa(GLuint shaderID, const TileMap &tilemap);
+void desenharMochi(GLuint shaderID, const TileMap &tilemap);
+bool carregarMapa(const string &mapPath, string &tileImagePath, int &nTiles, int &tileH, int &tileW, TileMap &tilemap);
+void inicializarTilemap(const string &tileImagePath, int nTiles, int tileH, int tileW, TileMap &tilemap);
+void moverJogador(int new_i, int new_j, int novaAnimacao);
 
-// ---- SHADERS ---- 
+// ---- SHADERS ----
 
 const GLchar *vertexShaderSource = R"(
  #version 400
@@ -143,8 +149,7 @@ const GLchar *fragmentShaderSource = R"(
  }
  )";
 
-
-// ---- FUNÇÃO MAIN ---- 
+// ---- FUNÇÃO MAIN ----
 int main()
 {
 	glfwInit();
@@ -194,16 +199,16 @@ int main()
 	GLuint shaderID = setupShader();
 
 	int imgWidth, imgHeight;
-	GLuint textureID = loadTexture("../assets/sprites/Mochi/Idle/Slime1_Idle_full.png",imgWidth,imgHeight);
+	GLuint textureID = loadTexture("../assets/sprites/Mochi/Walk/Slime1_Walk_full.png", imgWidth, imgHeight);
 
-    mochi.sprite.nAnimations = 4;
-    mochi.sprite.nFrames = 6;
-    mochi.sprite.VAO = setupSprite(mochi.sprite.nAnimations, mochi.sprite.nFrames, mochi.sprite.ds, mochi.sprite.dt);
-    mochi.sprite.position = vec3(0.0, 0.0, 0.0);
-    mochi.sprite.dimensions = vec3((imgWidth / mochi.sprite.nFrames) * 3.0f, (imgHeight / mochi.sprite.nAnimations) * 3.0f, 1.0f);
-    mochi.sprite.textureID = textureID;
-    mochi.sprite.iAnimation = 3; //assim, ele começa parado olhando pra frente
-    mochi.sprite.iFrame = 0; //primeiro frame da animação
+	mochi.sprite.nAnimations = 4;
+	mochi.sprite.nFrames = 8;
+	mochi.sprite.VAO = setupSprite(mochi.sprite.nAnimations, mochi.sprite.nFrames, mochi.sprite.ds, mochi.sprite.dt);
+	mochi.sprite.position = vec3(0.0, 0.0, 0.0);
+	mochi.sprite.dimensions = vec3((imgWidth / mochi.sprite.nFrames) * 3.0f, (imgHeight / mochi.sprite.nAnimations) * 3.0f, 1.0f);
+	mochi.sprite.textureID = textureID;
+	mochi.sprite.iAnimation = 3;
+	mochi.sprite.iFrame = 0;
 
 	mochi.lives = MOCHI_LIVES;
 
@@ -235,7 +240,6 @@ int main()
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 
 	double lastTime = 0.0;
 	double deltaT = 0.0;
@@ -303,9 +307,24 @@ int main()
 			desenharMochi(shaderID, tilemap);
 		}
 
+
+		static double lastFrameTime = glfwGetTime();
+		double now = glfwGetTime();
+
+		if ((now - lastFrameTime) > (1.0 / FPS))
+		{
+			lastFrameTime = now;
+
+			if (mochiIsIdle)
+			{
+				mochi.sprite.iAnimation = 0;
+			}
+
+			mochi.sprite.iFrame = (mochi.sprite.iFrame + 1) % mochi.sprite.nFrames;
+		}
 		glfwSwapBuffers(window);
 	}
-		
+
 	glfwTerminate();
 	return 0;
 }
@@ -314,10 +333,8 @@ int main()
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
-    float moveSpeed = 1.0f;
-
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GL_TRUE);
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, GL_TRUE);
 
 	// reinicia o jogo se pressionar R
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
@@ -345,53 +362,27 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         int new_i = player_i;
         int new_j = player_j;
 
-		if (key == GLFW_KEY_UP || key == GLFW_KEY_W) //norte
-            new_i--;
-
-		if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A) //oeste
-            new_j--;
-
-        if (key == GLFW_KEY_DOWN || key == GLFW_KEY_S) //sul
-            new_i++;
-
-        if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D) //leste
-            new_j++;
-
-		if (key == GLFW_KEY_C) //diagonal nordeste
-            new_i++; new_j++;
-
-		if (key == GLFW_KEY_E) //diagonal noroeste
-            new_i--; new_j++;
-
-        if (key == GLFW_KEY_Z) //diagonal sudoeste
-            new_i++; new_j--;
-
-        if (key == GLFW_KEY_Q) //diagonal sudeste
-            new_i--; new_j--;
-
-		if (new_i < 0 || new_i >= tilemap.height || new_j < 0 || new_j >= tilemap.width) {
-			return;
-		}
-	
-		// verifica se o tile é caminhável (não é água)
-		if (tilemap.mapMetadata[new_i][new_j] == TileMetadataType::NonWalkable) {
-			return;
-		}
-
-		// verifica se o tile é lava
-		// se for lava, o jogador volta para a posição inicial
-		if (tilemap.mapMetadata[new_i][new_j] == TileMetadataType::Lethal) {
-			mochi.died = true;
-			mochi.diedAt = glfwGetTime();
-			mochi.lives--;
-		}
-
-		player_i = new_i;
-		player_j = new_j;
+		if (key == GLFW_KEY_UP || key == GLFW_KEY_W) // norte
+			moverJogador(player_i - 1, player_j, andandoCostas);
+		else if (key == GLFW_KEY_LEFT || key == GLFW_KEY_A) //oeste
+			moverJogador(player_i, player_j - 1, andandoFrente);
+		else if (key == GLFW_KEY_DOWN || key == GLFW_KEY_S) //sul
+			moverJogador(player_i + 1, player_j, andandoFrente);
+		else if (key == GLFW_KEY_RIGHT || key == GLFW_KEY_D) //leste
+			moverJogador(player_i, player_j + 1, andandoFrente);
+		else if (key == GLFW_KEY_C) //sudeste
+			moverJogador(player_i + 1, player_j + 1, andandoFrente);
+		else if (key == GLFW_KEY_Z) //sudoeste
+			moverJogador(player_i + 1, player_j - 1, andandoFrente);
+		else if (key == GLFW_KEY_Q) //noroeste
+			moverJogador(player_i - 1, player_j - 1, andandoCostas);
+		else if (key == GLFW_KEY_E) //nordeste
+			moverJogador(player_i - 1, player_j + 1, andandoCostas);
     }
 }
 
-//compila e linka os shaders para criar o programa de shader OpenGL
+// ---- IMPLEMENTAÇÃO DAS FUNÇÕES ----
+
 int setupShader()
 {
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -438,23 +429,22 @@ int setupShader()
 	return shaderProgram;
 }
 
-//configura o VAO para um sprite quadrado
 int setupSprite(int nAnimations, int nFrames, float &ds, float &dt)
 {
 
-	ds = 1.0 / (float) nFrames;
-	dt = 1.0 / (float) nAnimations;
+	ds = 1.0 / (float)nFrames;
+	dt = 1.0 / (float)nAnimations;
 	// Aqui setamos as coordenadas x, y e z do triângulo e as armazenamos de forma
 	// sequencial, já visando mandar para o VBO (Vertex Buffer Objects)
 	// Cada atributo do vértice (coordenada, cores, coordenadas de textura, normal, etc)
 	// Pode ser arazenado em um VBO único ou em VBOs separados
 	GLfloat vertices[] = {
 		// x   y    z    s     t
-		-0.5,  0.5, 0.0, 0.0, dt, //V0
-		-0.5, -0.5, 0.0, 0.0, 0.0, //V1
-		 0.5,  0.5, 0.0, ds, dt, //V2
-		 0.5, -0.5, 0.0, ds, 0.0  //V3
-		};
+		-0.5, 0.5, 0.0, 0.0, dt,   // V0
+		-0.5, -0.5, 0.0, 0.0, 0.0, // V1
+		0.5, 0.5, 0.0, ds, dt,	   // V2
+		0.5, -0.5, 0.0, ds, 0.0	   // V3
+	};
 
 	GLuint VBO, VAO;
 	glGenBuffers(1, &VBO);
@@ -477,33 +467,29 @@ int setupSprite(int nAnimations, int nFrames, float &ds, float &dt)
 	return VAO;
 }
 
-//configura o VAO para um tile isométrico diamond
 int setupTile(int nTiles, float &ds, float &dt)
 {
-    
-	ds = 1.0 / (float) nTiles;
+	ds = 1.0 / (float)nTiles;
 	dt = 1.0;
-	
+
 	float th = 1.0, tw = 1.0;
 
 	GLfloat vertices[] = {
 		// x   y    z    s     t
-		0.0,  th/2.0f,   0.0, 0.0,    dt/2.0f, //A
-		tw/2.0f, th,     0.0, ds/2.0f, dt,     //B
-		tw/2.0f, 0.0,    0.0, ds/2.0f, 0.0,    //D
-		tw,     th/2.0f, 0.0, ds,     dt/2.0f  //C
-		};
+		0.0, th / 2.0f, 0.0, 0.0, dt / 2.0f, // A
+		tw / 2.0f, th, 0.0, ds / 2.0f, dt,	 // B
+		tw / 2.0f, 0.0, 0.0, ds / 2.0f, 0.0, // D
+		tw, th / 2.0f, 0.0, ds, dt / 2.0f	 // C
+	};
 
 	GLuint VBO, VAO;
 
 	glGenBuffers(1, &VBO);
-
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	glGenVertexArrays(1, &VAO);
-
 	glBindVertexArray(VAO);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid *)0);
@@ -513,13 +499,11 @@ int setupTile(int nTiles, float &ds, float &dt)
 	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
 	glBindVertexArray(0);
 
 	return VAO;
 }
 
-//carrega uma imagem de arquivo e transforma em textura OpenGL
 int loadTexture(string filePath, int &width, int &height)
 {
 	GLuint texID;
@@ -561,137 +545,173 @@ int loadTexture(string filePath, int &width, int &height)
 	return texID;
 }
 
-// renderiza o tilemap isométrico, desenhando cada tile na sua posição.
-void desenharMapa(GLuint shaderID, const TileMap& tilemap) {
+//renderiza o tilemap isométrico, desenhando cada tile na sua posição.
+void desenharMapa(GLuint shaderID, const TileMap &tilemap)
+{
 	float tileW = tilemap.tileset[0].dimensions.x;
 	float tileH = tilemap.tileset[0].dimensions.y;
-	
+
 	float centerMapX = (tilemap.width - tilemap.height) * (tileW / 2.0f);
 	float centerMapY = (tilemap.width + tilemap.height) * (tileH / 2.0f);
-	
-	float x0 = (WINDOW_WIDTH  / 2.0f) - (centerMapX / 2.0f);
+
+	float x0 = (WINDOW_WIDTH / 2.0f) - (centerMapX / 2.0f);
 	float y0 = (WINDOW_HEIGHT / 2.0f) - (centerMapY / 2.0f);
-	
-	// diamond isometric tilemap
-    for (int i = 0; i < tilemap.height; i++) {
-        for (int j = 0; j < tilemap.width; j++) {
-            mat4 model = mat4(1);
-            const Tile& curr_tile = tilemap.tileset[tilemap.map[i][j]];
 
-            float x = x0 + (j - i) * (curr_tile.dimensions.x / 2.0f);
-            float y = y0 + (j + i) * (curr_tile.dimensions.y / 2.0f);
+	//diamond isometric tilemap
+	for (int i = 0; i < tilemap.height; i++)
+	{
+		for (int j = 0; j < tilemap.width; j++)
+		{
+			mat4 model = mat4(1);
+			const Tile &curr_tile = tilemap.tileset[tilemap.map[i][j]];
 
-            model = translate(model, vec3(x, y, 0.0));
-            model = scale(model, curr_tile.dimensions);
-            glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+			float x = x0 + (j - i) * (curr_tile.dimensions.x / 2.0f);
+			float y = y0 + (j + i) * (curr_tile.dimensions.y / 2.0f);
 
-            vec2 offsetTex;
-            offsetTex.s = curr_tile.iTile * curr_tile.ds;
-            offsetTex.t = 0.0;
-            glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
+			model = translate(model, vec3(x, y, 0.0));
+			model = scale(model, curr_tile.dimensions);
+			glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
 
-            glBindVertexArray(curr_tile.VAO);
-            glBindTexture(GL_TEXTURE_2D, curr_tile.texID);
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        }
-    }
+			vec2 offsetTex;
+			offsetTex.s = curr_tile.iTile * curr_tile.ds;
+			offsetTex.t = 0.0;
+			glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
 
-	// marcando a posição do jogador (diamond)
-    const Tile& marker = tilemap.tileset[TileType::Player];
-
-    float px = x0 + (player_j - player_i) * (tileW / 2.0f);
-    float py = y0 + (player_j + player_i) * (tileH / 2.0f);
-
-    mat4 model = mat4(1);
-    model = translate(model, vec3(px, py, 0.1f));
-    model = scale(model, marker.dimensions);
-    glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
-
-    vec2 offsetTex;
-    offsetTex.s = marker.iTile * marker.ds;
-    offsetTex.t = 0.0;
-    glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
-
-    glBindVertexArray(marker.VAO);
-    glBindTexture(GL_TEXTURE_2D, marker.texID);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-}
-
-//renderiza o sprite do personagem Mochi no tilemap
-void desenharMochi(GLuint shaderID, const TileMap& tilemap) {
-    float tileW = tilemap.tileset[0].dimensions.x;
-    float tileH = tilemap.tileset[0].dimensions.y;
-
-    float map_display_offset_x = (WINDOW_WIDTH / 2.0f) - ((tilemap.width - tilemap.height) * (tileW / 2.0f) / 2.0f);
-    float map_display_offset_y = (WINDOW_HEIGHT / 2.0f) - ((tilemap.width + tilemap.height) * (tileH / 2.0f) / 2.0f);
-
-    float px = map_display_offset_x + (player_j - player_i) * (tileW / 2.0f);
-    float py = map_display_offset_y + (player_j + player_i) * (tileH / 2.0f);
-
-    mat4 model = mat4(1);
-
-    float mochi_x_position = px + (tileW / 2.0f);
-    float mochi_y_position = py + tileH - (mochi.sprite.dimensions.y / 2.0f) + 40.0f;
-
-    model = translate(model, vec3(mochi_x_position, mochi_y_position, 0.2f));
-    model = scale(model, mochi.sprite.dimensions);
-
-    glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
-	//cálculo do offset da animação no sprite
-    vec2 offsetTex;
-    offsetTex.s = mochi.sprite.iFrame * mochi.sprite.ds;
-    offsetTex.t = (mochi.sprite.nAnimations - 1 - mochi.sprite.iAnimation) * mochi.sprite.dt;
-
-    glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
-
-    glBindVertexArray(mochi.sprite.VAO);
-    glBindTexture(GL_TEXTURE_2D, mochi.sprite.textureID);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-}
-
-bool carregarMapa(const string& mapPath, string& tileImagePath, int& nTiles, int& tileH, int& tileW, TileMap& tilemap) {
-    std::ifstream file(mapPath);
-    if (!file.is_open()) {
-        cerr << "Erro ao abrir o arquivo de mapa: " << mapPath << endl;
-        return false;
-    }
-
-    file >> tileImagePath >> nTiles >> tileH >> tileW;
-
-    file >> tilemap.width >> tilemap.height;
-    tilemap.map.resize(tilemap.height, vector<TileType>(tilemap.width));
-    tilemap.mapMetadata.resize(tilemap.height, vector<TileMetadataType>(tilemap.width));
-
-    for (int i = 0; i < tilemap.height; ++i) {
-        for (int j = 0; j < tilemap.width; ++j) {
-			int tileNum;
-			file >> tileNum;
-            tilemap.map[i][j] = static_cast<TileType>(tileNum);
+			glBindVertexArray(curr_tile.VAO);
+			glBindTexture(GL_TEXTURE_2D, curr_tile.texID);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		}
 	}
 
-	for (int i = 0; i < tilemap.height; ++i) {
-		for (int j = 0; j < tilemap.width; ++j) {
+	//marcando a posição do jogador (diamond)
+	const Tile &marker = tilemap.tileset[TileType::Player];
+
+	float px = x0 + (player_j - player_i) * (tileW / 2.0f);
+	float py = y0 + (player_j + player_i) * (tileH / 2.0f);
+
+	mat4 model = mat4(1);
+	model = translate(model, vec3(px, py, 0.1f));
+	model = scale(model, marker.dimensions);
+	glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+
+	vec2 offsetTex;
+	offsetTex.s = marker.iTile * marker.ds;
+	offsetTex.t = 0.0;
+	glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
+
+	glBindVertexArray(marker.VAO);
+	glBindTexture(GL_TEXTURE_2D, marker.texID);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+//renderiza o sprite do personagem Mochi no tilemap
+void desenharMochi(GLuint shaderID, const TileMap &tilemap)
+{
+	float tileW = tilemap.tileset[0].dimensions.x;
+	float tileH = tilemap.tileset[0].dimensions.y;
+
+	float map_display_offset_x = (WINDOW_WIDTH / 2.0f) - ((tilemap.width - tilemap.height) * (tileW / 2.0f) / 2.0f);
+	float map_display_offset_y = (WINDOW_HEIGHT / 2.0f) - ((tilemap.width + tilemap.height) * (tileH / 2.0f) / 2.0f);
+
+	float px = map_display_offset_x + (player_j - player_i) * (tileW / 2.0f);
+	float py = map_display_offset_y + (player_j + player_i) * (tileH / 2.0f);
+
+	mat4 model = mat4(1);
+
+	float mochi_x_position = px + (tileW / 2.0f);
+	float mochi_y_position = py + tileH - (mochi.sprite.dimensions.y / 2.0f) + 40.0f;
+
+	model = translate(model, vec3(mochi_x_position, mochi_y_position, 0.2f));
+	model = scale(model, mochi.sprite.dimensions);
+
+	glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
+	//cálculo do offset da animação no sprite
+	vec2 offsetTex;
+	offsetTex.s = mochi.sprite.iFrame * mochi.sprite.ds;
+	offsetTex.t = mochi.sprite.iAnimation * mochi.sprite.dt;
+
+	glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), offsetTex.s, offsetTex.t);
+
+	glBindVertexArray(mochi.sprite.VAO);
+	glBindTexture(GL_TEXTURE_2D, mochi.sprite.textureID);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+bool carregarMapa(const string &mapPath, string &tileImagePath, int &nTiles, int &tileH, int &tileW, TileMap &tilemap)
+{
+	std::ifstream file(mapPath);
+	if (!file.is_open())
+	{
+		cerr << "Erro ao abrir o arquivo de mapa: " << mapPath << endl;
+		return false;
+	}
+
+	file >> tileImagePath >> nTiles >> tileH >> tileW;
+
+	file >> tilemap.width >> tilemap.height;
+	tilemap.map.resize(tilemap.height, vector<TileType>(tilemap.width));
+	tilemap.mapMetadata.resize(tilemap.height, vector<TileMetadataType>(tilemap.width));
+
+	for (int i = 0; i < tilemap.height; ++i)
+	{
+		for (int j = 0; j < tilemap.width; ++j)
+		{
+			int tileNum;
+			file >> tileNum;
+			tilemap.map[i][j] = static_cast<TileType>(tileNum);
+		}
+	}
+
+	for (int i = 0; i < tilemap.height; ++i)
+	{
+		for (int j = 0; j < tilemap.width; ++j)
+		{
 			int metadataNum;
 			file >> metadataNum;
 			tilemap.mapMetadata[i][j] = static_cast<TileMetadataType>(metadataNum);
 		}
 	}
 
-    return true;
+	return true;
 }
 
-void inicializarTilemap(const string& tileImagePath, int nTiles, int tileH, int tileW, TileMap& tilemap) {
-    int imgWidth, imgHeight;
-    GLuint texID = loadTexture(tileImagePath, imgWidth, imgHeight);
+void inicializarTilemap(const string &tileImagePath, int nTiles, int tileH, int tileW, TileMap &tilemap)
+{
+	int imgWidth, imgHeight;
+	GLuint texID = loadTexture(tileImagePath, imgWidth, imgHeight);
 
-    tilemap.tileset.clear();
-    for (int i = 0; i < nTiles; ++i) {
-        Tile tile;
-        tile.dimensions = vec3(tileW, tileH, 1.0);
-        tile.iTile = i;
-        tile.texID = texID;
-        tile.VAO = setupTile(nTiles, tile.ds, tile.dt);
-        tilemap.tileset.push_back(tile);
-    }
+	tilemap.tileset.clear();
+	for (int i = 0; i < nTiles; ++i)
+	{
+		Tile tile;
+		tile.dimensions = vec3(tileW, tileH, 1.0);
+		tile.iTile = i;
+		tile.texID = texID;
+		tile.VAO = setupTile(nTiles, tile.ds, tile.dt);
+		tilemap.tileset.push_back(tile);
+	}
+}
+
+void moverJogador(int novo_i, int novo_j, int novaAnim) {
+	if (novo_i < 0 || novo_i >= tilemap.height || novo_j < 0 || novo_j >= tilemap.width)
+		return;
+
+	// verifica se o tile é caminhável (não é água)
+	if (tilemap.mapMetadata[novo_i][novo_j] == TileMetadataType::NonWalkable)
+		return;
+
+	if (tilemap.mapMetadata[novo_i][novo_j] == TileMetadataType::Lethal) {
+		mochi.died = true;
+		mochi.diedAt = glfwGetTime();
+		mochi.lives--;
+	}
+
+	if (player_i != novo_i || player_j != novo_j) {
+		player_i = novo_i;
+		player_j = novo_j;
+		mochi.sprite.iAnimation = novaAnim;
+		mochi.sprite.iFrame = 0;
+		mochiIsIdle = false;
+		lastMoveTime = glfwGetTime();
+	}
 }
