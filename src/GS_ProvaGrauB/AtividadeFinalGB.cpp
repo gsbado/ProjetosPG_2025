@@ -49,6 +49,7 @@ enum TileMetadataType
 	Walkable = 0,
 	NonWalkable = 1,
 	Lethal = 2,
+	Coin = 3,
 };
 
 // ---- STRUCTS ----
@@ -68,6 +69,7 @@ struct Mochi {
 	bool died;
 	double diedAt;
 	int lives;
+	int coins;
 };
 	
 struct Tile
@@ -93,6 +95,7 @@ struct TileMap
 
 const GLuint WINDOW_WIDTH = 1850, WINDOW_HEIGHT = 900;
 const unsigned int MOCHI_LIVES = 3;
+const unsigned int TOTAL_COINS = 5;
 
 // posições iniciais do sprite no mapa
 int player_i = 0;
@@ -100,12 +103,15 @@ int player_j = 0;
 
 TileMap tilemap;
 Mochi mochi;
+Sprite coinSprite;
 
 bool gameOver;
+bool gameWon;
 double lastMoveTime = 0.0;
 bool mochiIsIdle = true;
 const int andandoFrente = 0;
 const int andandoCostas = 1;
+vector<vector<TileMetadataType>> originalMapMetadata;
 
 // ---- DECLARAÇÃO DE FUNÇÕES ----
 
@@ -221,6 +227,14 @@ int main()
 	}
 	inicializarTilemap(tileImagePath, nTiles, tileH, tileW, tilemap);
 
+	int coinWidth, coinHeight;
+	GLuint coinTextureID = loadTexture("../assets/sprites/coin/coin.png", coinWidth, coinHeight);
+	coinSprite.textureID  = coinTextureID;
+	coinSprite.VAO        = setupSprite(1, 1, coinSprite.ds, coinSprite.dt);
+	coinSprite.dimensions = vec3((float)coinWidth, (float)coinHeight, 1.0f);
+
+	mochi.coins = 0;
+
 	glUseProgram(shaderID);
 
 	double prev_s = glfwGetTime();
@@ -249,7 +263,7 @@ int main()
 	std::cout << "\n==============================\n";
 	std::cout << " Iniciando Mochi's Journey!\n";
 	std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
-	std::cout << " Encontre a moeda dourada!\n";
+	std::cout << " Encontre as " << TOTAL_COINS << " moedas douradas para vencer!" << "\n";
 	std::cout << "==============================\n" << std::endl;
 
 	while (!glfwWindowShouldClose(window))
@@ -302,11 +316,20 @@ int main()
 			}
 		}
 
+		gameWon = mochi.coins >= TOTAL_COINS;
+		if (gameWon) {
+			std::cout << "\n==============================\n";
+			std::cout << " PARABÉNS! Mochi encontrou todas as moedas!\n";
+			std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
+			std::cout << " Moedas do Mochi: " << mochi.coins << "\n";
+			std::cout << " Pressione R para reiniciar\n";
+			std::cout << "==============================\n" << std::endl;
+		}
+
 		if (!gameOver) {
 			desenharMapa(shaderID, tilemap);
 			desenharMochi(shaderID, tilemap);
 		}
-
 
 		static double lastFrameTime = glfwGetTime();
 		double now = glfwGetTime();
@@ -343,6 +366,9 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
 		mochi.lives = MOCHI_LIVES;
 		mochi.died = false;
+		mochi.coins = 0;
+
+		tilemap.mapMetadata = originalMapMetadata;
 
 		player_i = 0;
 		player_j = 0;
@@ -350,7 +376,12 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 		std::cout << "\n==============================\n";
 		std::cout << " Reiniciando Mochi's Journey!\n";
 		std::cout << " Vidas do Mochi: " << mochi.lives << "\n";
+		std::cout << " Moedas do Mochi: " << mochi.coins << "\n";
 		std::cout << "==============================\n" << std::endl;
+	}
+
+	if (gameOver || gameWon) {
+		return;
 	}
 
 	// se o mochi morreu, não pode se mover
@@ -580,6 +611,28 @@ void desenharMapa(GLuint shaderID, const TileMap &tilemap)
 			glBindVertexArray(curr_tile.VAO);
 			glBindTexture(GL_TEXTURE_2D, curr_tile.texID);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+			if (tilemap.mapMetadata[i][j] == TileMetadataType::Coin) {
+				mat4 model = mat4(1.0f);
+				
+				float coinX = x + (coinSprite.dimensions.x * 1.2f);
+				float coinY = y + (coinSprite.dimensions.y * 0.5f);
+				model = translate(model, vec3(coinX, coinY, 0.1f));
+				model = scale(model, coinSprite.dimensions);
+			
+				glUniformMatrix4fv(
+				  glGetUniformLocation(shaderID, "model"), 1, GL_FALSE,
+				  value_ptr(model)
+				);
+				glUniform2f(
+				  glGetUniformLocation(shaderID, "offsetTex"),
+				  0.0f, 0.0f
+				);
+			
+				glBindVertexArray(coinSprite.VAO);
+				glBindTexture(GL_TEXTURE_2D, coinSprite.textureID);
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			}
 		}
 	}
 
@@ -649,6 +702,9 @@ bool carregarMapa(const string &mapPath, string &tileImagePath, int &nTiles, int
 	file >> tileImagePath >> nTiles >> tileH >> tileW;
 
 	file >> tilemap.width >> tilemap.height;
+
+	originalMapMetadata.resize(tilemap.height, vector<TileMetadataType>(tilemap.width));
+
 	tilemap.map.resize(tilemap.height, vector<TileType>(tilemap.width));
 	tilemap.mapMetadata.resize(tilemap.height, vector<TileMetadataType>(tilemap.width));
 
@@ -668,9 +724,11 @@ bool carregarMapa(const string &mapPath, string &tileImagePath, int &nTiles, int
 		{
 			int metadataNum;
 			file >> metadataNum;
-			tilemap.mapMetadata[i][j] = static_cast<TileMetadataType>(metadataNum);
+			originalMapMetadata[i][j] = static_cast<TileMetadataType>(metadataNum);
 		}
 	}
+
+	tilemap.mapMetadata = originalMapMetadata;
 
 	return true;
 }
@@ -696,14 +754,27 @@ void moverJogador(int novo_i, int novo_j, int novaAnim) {
 	if (novo_i < 0 || novo_i >= tilemap.height || novo_j < 0 || novo_j >= tilemap.width)
 		return;
 
-	// verifica se o tile é caminhável (não é água)
-	if (tilemap.mapMetadata[novo_i][novo_j] == TileMetadataType::NonWalkable)
-		return;
+	switch (tilemap.mapMetadata[novo_i][novo_j]) {
+		case TileMetadataType::NonWalkable:
+			return;
+		case TileMetadataType::Lethal:
+			mochi.died = true;
+			mochi.diedAt = glfwGetTime();
+			mochi.lives--;
+			break;
+		case TileMetadataType::Coin:
+			mochi.coins++;
 
-	if (tilemap.mapMetadata[novo_i][novo_j] == TileMetadataType::Lethal) {
-		mochi.died = true;
-		mochi.diedAt = glfwGetTime();
-		mochi.lives--;
+			 // remove a moeda do mapa
+			tilemap.mapMetadata[novo_i][novo_j] = TileMetadataType::Walkable;
+			
+			std::cout << "\n==============================\n";
+			std::cout << " Você coletou uma moeda!" << "\n";
+			std::cout << " Total de moedas: " << mochi.coins << "\n";
+			std::cout << "==============================\n" << std::endl;
+			break;
+		default:
+			break; // outros tipos de tile são caminháveis
 	}
 
 	if (player_i != novo_i || player_j != novo_j) {
