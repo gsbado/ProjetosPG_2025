@@ -805,7 +805,7 @@ void desenharGameOver(GLFWwindow *window, GLuint shaderID, const Sprite &gameOve
 	{
 		mat4 model = mat4(1.0f);
 		model = translate(model, vec3(go_x, go_y, 0.5f));
-		model = scale(model, gameOverSprite.dimensions);
+		model = scale(model, winnerSprite.dimensions);
 
 		glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(model));
 		glUniform2f(glGetUniformLocation(shaderID, "offsetTex"), 0.0f, 0.0f);
