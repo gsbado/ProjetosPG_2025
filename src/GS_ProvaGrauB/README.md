@@ -53,7 +53,7 @@ Mochi vive no Planeta Pixelândia, um mundo isométrico que guarda segredos anti
 
 Um dia, os ventos do Norte sussurraram uma profecia:
 
-> “Apenas aquele que reunir as Cinco Moedas Douradas da Coragem poderá restaurar o equilíbrio entre os elementos e proteger a terra da corrupção pixelada.”
+> “Apenas aquele que reunir as Cinco Moedas Douradas da Virtude poderá restaurar o equilíbrio entre os elementos e proteger a terra da corrupção pixelada.”
 
 Determinado a provar seu valor e proteger sua terra, Mochi parte em uma jornada para reunir as moedas espalhadas no mapa. Mas o caminho não é fácil... Lava brota de fendas traiçoeiras e pode derretê-lo em segundos. Águas o assustam, pois Mochi, sendo leve e mágico, não sabe nadar. Apenas os caminhos seguros, como areia, grama e terra firme, podem levá-lo até seu destino.
 
